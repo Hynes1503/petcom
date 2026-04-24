@@ -1,0 +1,753 @@
+﻿@model List<petcomm.Models.AdoptionRequest>
+@{
+    ViewData["Title"] = "Yêu cầu nhận nuôi gửi đến tôi - PetComm";
+    Layout = "_Layout";
+
+    var pendingCount = ViewBag.PendingCount ?? 0;
+    var approvedCount = ViewBag.ApprovedCount ?? 0;
+    var rejectedCount = ViewBag.RejectedCount ?? 0;
+    var totalCount = ViewBag.TotalCount ?? 0;
+    var selectedPostId = ViewBag.SelectedPostId as int?;
+    var selectedPostTitle = ViewBag.SelectedPostTitle as string;
+    var userPosts = ViewBag.UserPosts as List<dynamic> ?? new List<dynamic>();
+}
+
+@section Styles {
+    <style>
+        .received-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-header h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .page-header h1 i {
+            color: var(--accent);
+            margin-right: 12px;
+        }
+
+        .page-header p {
+            color: var(--text-muted);
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+            transition: transform .2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-card.pending { border-top: 3px solid #e67e22; }
+        .stat-card.approved { border-top: 3px solid #2d7a3a; }
+        .stat-card.rejected { border-top: 3px solid #e74c3c; }
+        .stat-card.total { border-top: 3px solid var(--accent); }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-card.pending .stat-number { color: #e67e22; }
+        .stat-card.approved .stat-number { color: #2d7a3a; }
+        .stat-card.rejected .stat-number { color: #e74c3c; }
+        .stat-card.total .stat-number { color: var(--accent); }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* Filter Bar */
+        .filter-bar {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 16px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .post-filter {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface-2);
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: all .15s;
+        }
+
+        .post-filter:hover, .post-filter:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        .btn-reset {
+            padding: 8px 20px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 13px;
+            transition: all .15s;
+        }
+
+        .btn-reset:hover {
+            background: var(--border);
+            color: var(--text-primary);
+        }
+
+        .selected-post-info {
+            background: var(--accent-light);
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+        }
+
+        .selected-post-info i {
+            color: var(--accent);
+            margin-right: 6px;
+        }
+
+        /* Request Cards */
+        .requests-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .request-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: all .2s;
+        }
+
+        .request-card:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        .request-header {
+            padding: 20px 24px;
+            background: var(--surface-2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .post-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .post-title {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .post-title a {
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+
+        .post-title a:hover {
+            color: var(--accent);
+        }
+
+        .requester-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .requester-avatar {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .requester-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .request-date {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-pending { background: #fff3e0; color: #e67e22; }
+        .status-approved { background: #e9f5ec; color: #2d7a3a; }
+        .status-rejected { background: #fdecea; color: #c0392b; }
+        .status-cancelled { background: #e8e8e8; color: #7f8c8d; }
+
+        .request-body {
+            padding: 24px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            background: var(--surface-2);
+            padding: 12px;
+            border-radius: var(--radius-sm);
+        }
+
+        .info-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .info-value {
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .request-message {
+            background: var(--surface-2);
+            padding: 16px;
+            border-radius: var(--radius-sm);
+            margin: 16px 0;
+            border-left: 3px solid var(--accent);
+        }
+
+        .admin-note {
+            background: #fff8e1;
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            margin-top: 12px;
+            border-left: 3px solid #f59e0b;
+        }
+
+        .request-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn-approve, .btn-reject {
+            padding: 8px 20px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all .15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-approve {
+            background: #2d7a3a;
+            color: #fff;
+        }
+
+        .btn-approve:hover {
+            background: #1f5e2a;
+            transform: translateY(-1px);
+        }
+
+        .btn-reject {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        .btn-reject:hover {
+            background: #c0392b;
+            transform: translateY(-1px);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 40px;
+            background: var(--surface);
+            border-radius: var(--radius);
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 12px;
+        }
+
+        .empty-state p {
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 16px;
+        }
+
+        .modal-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            margin: 16px 0;
+            resize: vertical;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        @@media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .request-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+}
+
+<div class="received-container">
+    <div class="page-header">
+        <h1>
+            <i class="fa-solid fa-inbox"></i>
+            Yêu cầu nhận nuôi
+        </h1>
+        <p>Quản lý tất cả các yêu cầu nhận nuôi gửi đến bạn</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card pending">
+            <div class="stat-number">@pendingCount</div>
+            <div class="stat-label">Đang chờ xử lý</div>
+        </div>
+        <div class="stat-card approved">
+            <div class="stat-number">@approvedCount</div>
+            <div class="stat-label">Đã duyệt</div>
+        </div>
+        <div class="stat-card rejected">
+            <div class="stat-number">@rejectedCount</div>
+            <div class="stat-label">Đã từ chối</div>
+        </div>
+        <div class="stat-card total">
+            <div class="stat-number">@totalCount</div>
+            <div class="stat-label">Tổng số</div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <div class="filter-group">
+            <span class="filter-label"><i class="fa-solid fa-filter"></i> Lọc theo bài viết:</span>
+            <select id="postFilter" class="post-filter" onchange="filterByPost()">
+                <option value="">Tất cả bài viết</option>
+                @foreach (var post in userPosts)
+                {
+                    <option value="@post.Id" selected="@(selectedPostId == post.Id)">
+                        @post.Title
+                    </option>
+                }
+            </select>
+            @if (selectedPostId.HasValue)
+            {
+                <a href="/Adoption/ReceivedRequests" class="btn-reset">
+                    <i class="fa-solid fa-times"></i> Xóa lọc
+                </a>
+            }
+        </div>
+        @if (!string.IsNullOrEmpty(selectedPostTitle))
+        {
+            <div class="selected-post-info">
+                <i class="fa-solid fa-paw"></i>
+                Đang xem: <strong>@selectedPostTitle</strong>
+            </div>
+        }
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fa-regular fa-inbox"></i>
+            </div>
+            <h3>Chưa có yêu cầu nào</h3>
+            <p>Chưa có ai gửi yêu cầu nhận nuôi cho bài viết của bạn.</p>
+            <a href="/" class="btn-approve" style="text-decoration: none;">
+                <i class="fa-solid fa-paw"></i> Xem bài viết của tôi
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="requests-list">
+            @foreach (var request in Model)
+            {
+                <div class="request-card" id="request-@request.Id">
+                    <div class="request-header">
+                        <div class="post-info">
+                            <i class="fa-solid fa-paw" style="color: var(--accent);"></i>
+                            <div class="post-title">
+                                <a href="/UserPost/Details/@request.PostId">@request.Post?.Title</a>
+                            </div>
+                        </div>
+                        <div class="status-badge status-@request.Status.ToLower()">
+                            @{
+                                var statusIcon = request.Status == "pending" ? "fa-regular fa-hourglass-half" :
+                                request.Status == "approved" ? "fa-solid fa-check-circle" :
+                                request.Status == "rejected" ? "fa-solid fa-times-circle" : "fa-solid fa-ban";
+                                var statusText = request.Status == "pending" ? "Đang chờ" :
+                                request.Status == "approved" ? "Đã duyệt" :
+                                request.Status == "rejected" ? "Đã từ chối" : "Đã hủy";
+                            }
+                            <i class="@statusIcon"></i> @statusText
+                        </div>
+                    </div>
+
+                    <div class="request-body">
+                        <div class="requester-info" style="margin-bottom: 20px;">
+                            <div class="requester-avatar">
+                                @request.Requester?.Username?.FirstOrDefault().ToString().ToUpper()
+                            </div>
+                            <div>
+                                <div class="requester-name">
+                                    <i class="fa-regular fa-user"></i> @request.Requester?.Username
+                                </div>
+                                <div class="request-date">
+                                    <i class="fa-regular fa-calendar"></i> Gửi lúc: @request.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-label"><i class="fa-solid fa-phone"></i> Số điện thoại</div>
+                                <div class="info-value">@request.PhoneNumber</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fa-solid fa-location-dot"></i> Địa chỉ</div>
+                                <div class="info-value">@request.Address</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fa-solid fa-dog"></i> Kinh nghiệm</div>
+                                <div class="info-value">@(string.IsNullOrEmpty(request.Experience) ? "Chưa cung cấp" : request.Experience)</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fa-solid fa-house"></i> Loại nhà ở</div>
+                                <div class="info-value">@(string.IsNullOrEmpty(request.HousingType) ? "Chưa cung cấp" : request.HousingType)</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label"><i class="fa-solid fa-paw"></i> Có nuôi thú khác</div>
+                                <div class="info-value">@(request.HasOtherPets ? "Có" : "Không")</div>
+                            </div>
+                        </div>
+
+                        <div class="request-message">
+                            <div class="info-label" style="margin-bottom: 8px;">
+                                <i class="fa-regular fa-message"></i> Lời nhắn:
+                            </div>
+                            @request.Message
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(request.Reason))
+                        {
+                            <div class="request-message">
+                                <div class="info-label" style="margin-bottom: 8px;">
+                                    <i class="fa-regular fa-heart"></i> Lý do muốn nhận nuôi:
+                                </div>
+                                @request.Reason
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(request.AdminNote))
+                        {
+                            <div class="admin-note">
+                                <div class="info-label" style="margin-bottom: 4px;">
+                                    <i class="fa-regular fa-note-sticky"></i> Ghi chú của bạn:
+                                </div>
+                                @request.AdminNote
+                            </div>
+                        }
+
+                        @if (request.Status == "pending")
+                        {
+                            <div class="request-actions">
+                                <button class="btn-approve" onclick="openApproveModal(@request.Id)">
+                                    <i class="fa-solid fa-check"></i> Xác nhận nhận nuôi
+                                </button>
+                                <button class="btn-reject" onclick="openRejectModal(@request.Id)">
+                                    <i class="fa-solid fa-times"></i> Từ chối
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Approve Modal -->
+<div id="approveModal" class="modal">
+    <div class="modal-content">
+        <h3><i class="fa-solid fa-check-circle" style="color: #2d7a3a;"></i> Xác nhận nhận nuôi</h3>
+        <p>Bạn có chắc chắn muốn xác nhận người này nhận nuôi thú cưng?</p>
+        <div style="background: #fff3e0; padding: 10px; border-radius: 8px; margin: 10px 0;">
+            <i class="fa-solid fa-info-circle" style="color: #e67e22;"></i>
+            Lưu ý: Các yêu cầu khác sẽ tự động bị từ chối.
+        </div>
+        <textarea id="approveNote" class="modal-textarea" rows="3"
+                  placeholder="Ghi chú (tùy chọn)"></textarea>
+        <div class="modal-actions">
+            <button class="btn-reject" onclick="closeModal('approveModal')">Hủy</button>
+            <button class="btn-approve" onclick="processApprove()">Xác nhận</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div id="rejectModal" class="modal">
+    <div class="modal-content">
+        <h3><i class="fa-solid fa-times-circle" style="color: #e74c3c;"></i> Từ chối yêu cầu</h3>
+        <p>Bạn có chắc chắn muốn từ chối yêu cầu này?</p>
+        <textarea id="rejectNote" class="modal-textarea" rows="3"
+                  placeholder="Lý do từ chối (tùy chọn)"></textarea>
+        <div class="modal-actions">
+            <button class="btn-approve" onclick="closeModal('rejectModal')">Hủy</button>
+            <button class="btn-reject" onclick="processReject()">Từ chối</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let currentRequestId = null;
+
+        function filterByPost() {
+            const postId = document.getElementById('postFilter').value;
+            if (postId) {
+                window.location.href = `/Adoption/FilterByPost?postId=${postId}`;
+            } else {
+                window.location.href = '/Adoption/ReceivedRequests';
+            }
+        }
+
+        function openApproveModal(requestId) {
+            currentRequestId = requestId;
+            document.getElementById('approveModal').classList.add('active');
+            document.getElementById('approveNote').value = '';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function openRejectModal(requestId) {
+            currentRequestId = requestId;
+            document.getElementById('rejectModal').classList.add('active');
+            document.getElementById('rejectNote').value = '';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            currentRequestId = null;
+            document.body.style.overflow = '';
+        }
+
+        async function processApprove() {
+            const note = document.getElementById('approveNote').value;
+            const btn = document.querySelector('#approveModal .btn-approve');
+            const originalText = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+
+            try {
+                const response = await fetch('/Adoption/Approve', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: `requestId=${currentRequestId}&adminNote=${encodeURIComponent(note)}`
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    window.location.reload();
+                } else {
+                    alert('❌ Lỗi: ' + data.message);
+                    closeModal('approveModal');
+                }
+            } catch (error) {
+                alert('❌ Có lỗi xảy ra, vui lòng thử lại.');
+                closeModal('approveModal');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        async function processReject() {
+            const note = document.getElementById('rejectNote').value;
+            const btn = document.querySelector('#rejectModal .btn-reject');
+            const originalText = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+
+            try {
+                const response = await fetch('/Adoption/Reject', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: `requestId=${currentRequestId}&adminNote=${encodeURIComponent(note)}`
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    window.location.reload();
+                } else {
+                    alert('❌ Lỗi: ' + data.message);
+                    closeModal('rejectModal');
+                }
+            } catch (error) {
+                alert('❌ Có lỗi xảy ra, vui lòng thử lại.');
+                closeModal('rejectModal');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal').forEach(modal => {
+                    modal.classList.remove('active');
+                });
+                document.body.style.overflow = '';
+            }
+        });
+    </script>
+}

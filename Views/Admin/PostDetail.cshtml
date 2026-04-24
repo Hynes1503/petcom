@@ -1,0 +1,161 @@
+@model Post
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["ActiveMenu"] = "posts";
+}
+
+<a href="/admin/posts" class="back-link">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12,19 5,12 12,5"/></svg>
+    Quay lại danh sách
+</a>
+
+<div class="admin-page-header">
+    <div>
+        <h1 class="page-title" style="font-size:20px;">@Model.Title</h1>
+        <span class="page-subtitle">Bài đăng #@Model.Id · Đăng @Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+        <select id="statusSelect" style="padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;">
+            <option value="Active" selected="@(Model.Status == "Active")">Active</option>
+            <option value="Hidden" selected="@(Model.Status == "Hidden")">Hidden</option>
+            <option value="Pending" selected="@(Model.Status == "Pending")">Pending</option>
+        </select>
+        <button class="btn-filter" onclick="changeStatus(@Model.Id)">Lưu trạng thái</button>
+        <button class="btn-filter" onclick="confirmDelete(@Model.Id)" style="background:var(--red);">Xoá bài</button>
+    </div>
+</div>
+
+<div class="detail-grid">
+    <!-- Info -->
+    <div>
+        <div class="info-card" style="margin-bottom:16px;">
+            <div class="section-title">Thông tin bài đăng</div>
+            <div class="info-row">
+                <label>Tác giả</label>
+                <a href="/admin/users/@Model.UserId" style="color:var(--primary);text-decoration:none;font-size:14px;">@Model.User?.Username</a>
+            </div>
+            <div class="info-row">
+                <label>Loại</label>
+                <span class="type-badge">@Model.Type</span>
+            </div>
+            <div class="info-row">
+                <label>Trạng thái</label>
+                <span class="status-badge status-@Model.Status?.ToLower()">@Model.Status</span>
+            </div>
+            <div class="info-row">
+                <label>Số ảnh</label>
+                <span>@Model.Images?.Count ảnh</span>
+            </div>
+            <div class="info-row">
+                <label>Số bình luận</label>
+                <span>@Model.Comments?.Count bình luận</span>
+            </div>
+            <div class="info-row">
+                <label>Ngày đăng</label>
+                <span>@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+            </div>
+        </div>
+
+        <!-- Images -->
+        @if (Model.Images?.Any() == true)
+        {
+            <div class="info-card">
+                <div class="section-title">Hình ảnh (@Model.Images.Count)</div>
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">
+                    @foreach (var img in Model.Images)
+                    {
+                        <img src="@img.ImagePath" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;" />
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Content + Comments -->
+    <div>
+        <div class="info-card" style="margin-bottom:16px;">
+            <div class="section-title">Nội dung</div>
+            <div style="font-size:15px;line-height:1.7;color:var(--text);white-space:pre-wrap;">@Model.Content</div>
+        </div>
+
+        <div class="info-card">
+            <div class="section-title">Bình luận (@(Model.Comments?.Count ?? 0))</div>
+            @if (Model.Comments?.Any() == true)
+            {
+                @foreach (var comment in Model.Comments.OrderByDescending(c => c.CreatedAt))
+                {
+                    <div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;gap:10px;">
+                        <div style="width:30px;height:30px;border-radius:50%;background:var(--primary-dim);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;">
+                            @(comment.User?.Username?.Substring(0, 1).ToUpper())
+                        </div>
+                        <div>
+                            <div style="font-size:13px;font-weight:600;">@comment.User?.Username <span style="color:var(--text-muted);font-weight:400;">· @comment.CreatedAt.ToString("dd/MM/yy HH:mm")</span></div>
+                            <div style="font-size:14px;margin-top:3px;">@comment.Content</div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="empty-state" style="padding:30px;">
+                    <p>Chưa có bình luận</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+        <h3 class="modal-title">Xác nhận xoá bài đăng</h3>
+        <p class="modal-msg">Xoá bài đăng này sẽ xoá tất cả hình ảnh và bình luận liên quan. Hành động không thể hoàn tác.</p>
+        <div class="modal-actions">
+            <button onclick="document.getElementById('deleteModal').style.display='none'" class="btn-cancel">Huỷ</button>
+            <button onclick="executeDelete()" class="btn-confirm-delete">Xoá bài đăng</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const TOKEN = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+    async function changeStatus(id) {
+        const newStatus = document.getElementById('statusSelect').value;
+        const fd = new FormData();
+        fd.append('newStatus', newStatus);
+        const res = await fetch(`/admin/posts/${id}/toggle-status`, {
+            method: 'POST', headers: { 'RequestVerificationToken': TOKEN }, body: fd
+        });
+        const data = await res.json();
+        showToast(data.message, data.success ? 'success' : 'error');
+    }
+
+    let deleteId = null;
+    function confirmDelete(id) {
+        deleteId = id;
+        document.getElementById('deleteModal').style.display = 'flex';
+    }
+    async function executeDelete() {
+        const res = await fetch(`/admin/posts/${deleteId}/delete`, {
+            method: 'POST', headers: { 'RequestVerificationToken': TOKEN }
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Đã xoá bài đăng', 'success');
+            setTimeout(() => window.location.href = '/admin/posts', 1000);
+        } else showToast(data.message, 'error');
+        document.getElementById('deleteModal').style.display = 'none';
+    }
+
+    function showToast(msg, type) {
+        const t = document.createElement('div');
+        t.className = `toast toast-${type}`;
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.classList.add('show'), 10);
+        setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3000);
+    }
+</script>
+}

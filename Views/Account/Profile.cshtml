@@ -1,0 +1,1528 @@
+﻿@model petcomm.Models.UserProfileViewModel
+@{
+    ViewData["Title"] = Model.User.Username + " — PetComm Profile";
+    Layout = "_Layout";
+
+    var isOwnProfile = Model.IsOwnProfile;
+    var currentUsername = Context.Session.GetString("Username");
+    var isLoggedIn = currentUsername != null;
+    var commentCounts = ViewBag.CommentCounts as Dictionary<int, int> ?? new Dictionary<int, int>();
+    var bookmarkedByUser = ViewBag.BookmarkedByUser as List<int> ?? new List<int>();
+}
+
+@section Styles {
+    <style>
+        /* HERO */
+        .hero {
+            background: linear-gradient(135deg, #1c1a17 0%, #2e2419 60%, #3d2d18 100%);
+            padding: 64px 32px 56px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .hero::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: radial-gradient(ellipse 70% 60% at 60% 50%, rgba(201,98,42,.18) 0%, transparent 70%);
+                pointer-events: none;
+            }
+
+        .hero-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 4px solid rgba(201,98,42,.5);
+            object-fit: cover;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.2);
+        }
+
+        .hero-avatar-placeholder {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e8892e, #c9622a);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.2);
+        }
+
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(201,98,42,.15);
+            border: 1px solid rgba(201,98,42,.3);
+            color: #e8892e;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 12.5px;
+            font-weight: 600;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+
+        .hero h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 46px;
+            color: #fff;
+            line-height: 1.15;
+            margin-bottom: 16px;
+            letter-spacing: -.02em;
+        }
+
+            .hero h1 span {
+                color: #e8892e;
+            }
+
+        .hero-bio {
+            font-size: 16px;
+            color: rgba(255,255,255,.6);
+            max-width: 600px;
+            margin: 0 auto 32px;
+            line-height: 1.6;
+        }
+
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            flex-wrap: wrap;
+            margin-bottom: 28px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            color: #e8892e;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: rgba(255,255,255,.7);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            margin-top: 6px;
+        }
+
+        .edit-profile-btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+            .edit-profile-btn:hover {
+                background: #e8892e;
+                transform: translateY(-2px);
+            }
+
+        /* LAYOUT */
+        .content-wrap {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 40px 24px 60px;
+            display: grid;
+            grid-template-columns: 1fr 288px;
+            gap: 32px;
+            align-items: start;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 22px;
+            color: var(--text-primary);
+            font-weight: 400;
+        }
+
+        .section-count {
+            font-size: 13px;
+            color: var(--text-muted);
+            background: var(--surface-2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        /* PROFILE TABS */
+        .profile-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 28px;
+            gap: 4px;
+        }
+
+        .tab-link {
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+            transition: all .18s;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+            .tab-link.active {
+                color: var(--accent);
+                border-bottom-color: var(--accent);
+            }
+
+            .tab-link:hover {
+                color: var(--accent);
+            }
+
+        /* POST CARD */
+        .post-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .post-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: box-shadow .2s, transform .2s;
+        }
+
+            .post-card:hover {
+                box-shadow: var(--shadow-md);
+                transform: translateY(-2px);
+            }
+
+        /* Images */
+        .post-images {
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .post-img-main {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            display: block;
+            transition: transform .3s;
+        }
+
+        .post-card:hover .post-img-main {
+            transform: scale(1.02);
+        }
+
+        .post-img-more {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,.62);
+            color: #fff;
+            font-size: 12.5px;
+            font-weight: 600;
+            padding: 4px 11px;
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,.2);
+        }
+
+        .post-img-strip {
+            display: flex;
+            gap: 3px;
+            background: #000;
+        }
+
+            .post-img-strip img {
+                flex: 1;
+                height: 72px;
+                object-fit: cover;
+                cursor: pointer;
+                opacity: .85;
+                transition: opacity .15s;
+            }
+
+                .post-img-strip img:hover {
+                    opacity: 1;
+                }
+
+        /* Card body */
+        .post-body {
+            padding: 18px 20px 20px;
+        }
+
+        .post-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 11px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 600;
+            letter-spacing: .02em;
+        }
+
+            .type-badge.share {
+                background: #e8f4fd;
+                color: #2471a3;
+            }
+
+            .type-badge.adopt {
+                background: #e9f5ec;
+                color: #2d7a3a;
+            }
+
+            .type-badge.lost {
+                background: #fef9e7;
+                color: #b7950b;
+            }
+
+        .post-date {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .post-title {
+            font-size: 16.5px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .post-excerpt {
+            font-size: 13.5px;
+            color: var(--text-secondary);
+            line-height: 1.65;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .post-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .read-more {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--accent);
+            text-decoration: none;
+            transition: gap .15s;
+            white-space: nowrap;
+        }
+
+            .read-more:hover {
+                gap: 8px;
+            }
+
+        /* ACTIONS */
+        .post-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 13px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all .15s;
+            font-family: 'DM Sans', sans-serif;
+            white-space: nowrap;
+        }
+
+            .action-btn:hover {
+                background: var(--accent-light);
+                border-color: var(--accent);
+                color: var(--accent);
+            }
+
+            .action-btn.saved {
+                background: #fff8e1;
+                border-color: #f59e0b;
+                color: #d97706;
+            }
+
+            .action-btn.cmt-open {
+                background: var(--accent-light);
+                border-color: var(--accent);
+                color: var(--accent);
+            }
+
+        /* COMMENTS */
+        .comment-section {
+            display: none;
+            border-top: 1px solid var(--border);
+            padding: 16px 20px 20px;
+            background: var(--surface-2);
+        }
+
+            .comment-section.open {
+                display: block;
+            }
+
+        .comment-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .comment-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .comment-bubble {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 0 10px 10px 10px;
+            padding: 8px 12px;
+            flex: 1;
+        }
+
+        .comment-username {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 3px;
+        }
+
+        .comment-text {
+            font-size: 13.5px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .comment-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .comment-input-wrap {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+            align-items: flex-end;
+        }
+
+        .comment-input {
+            flex: 1;
+            padding: 9px 13px;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13.5px;
+            background: var(--surface);
+            color: var(--text-primary);
+            outline: none;
+            resize: none;
+            transition: border-color .15s;
+            line-height: 1.4;
+        }
+
+            .comment-input:focus {
+                border-color: var(--accent);
+            }
+
+        .comment-submit {
+            padding: 9px 18px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: background .15s;
+            white-space: nowrap;
+        }
+
+            .comment-submit:hover {
+                background: var(--accent-hover);
+            }
+
+        .comment-login-note {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 10px 0 4px;
+        }
+
+        /* Empty state */
+        .empty-state {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 60px 30px;
+            text-align: center;
+        }
+
+        .empty-icon {
+            font-size: 44px;
+            margin-bottom: 14px;
+            opacity: .5;
+        }
+
+        .empty-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .empty-sub {
+            font-size: 13.5px;
+            color: var(--text-muted);
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: sticky;
+            top: calc(var(--nav-h) + 24px);
+        }
+
+        .sidebar-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .sidebar-card-title {
+            font-size: 11.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .09em;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .quick-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 9px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 13.5px;
+        }
+
+            .quick-stat:last-child {
+                border-bottom: none;
+            }
+
+        .quick-stat-label {
+            color: var(--text-secondary);
+        }
+
+        .quick-stat-val {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .cta-box {
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            border-radius: var(--radius);
+            padding: 22px 20px;
+            color: #fff;
+            text-align: center;
+        }
+
+            .cta-box h3 {
+                font-family: 'DM Serif Display', serif;
+                font-size: 18px;
+                margin-bottom: 8px;
+                font-weight: 400;
+            }
+
+            .cta-box p {
+                font-size: 13px;
+                opacity: .85;
+                margin-bottom: 16px;
+                line-height: 1.5;
+            }
+
+        .cta-btn {
+            display: inline-block;
+            background: #fff;
+            color: var(--accent);
+            padding: 9px 20px;
+            border-radius: var(--radius-sm);
+            font-size: 13.5px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all .15s;
+            cursor: pointer;
+            border: none;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+            .cta-btn:hover {
+                background: #fff3ed;
+                transform: translateY(-1px);
+            }
+
+        /* Edit Profile Modal Styles */
+        .edit-profile-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(28,26,23,.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(6px);
+            padding: 20px;
+        }
+
+            .edit-profile-modal.active {
+                display: flex;
+            }
+
+        .edit-profile-container {
+            background: var(--surface);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 550px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: var(--shadow-md);
+        }
+
+        .edit-profile-header {
+            padding: 24px 28px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: var(--surface);
+            z-index: 1;
+        }
+
+            .edit-profile-header h2 {
+                font-family: 'DM Serif Display', serif;
+                font-size: 24px;
+                color: var(--text-primary);
+            }
+
+                .edit-profile-header h2 span {
+                    color: var(--accent);
+                }
+
+        .close-modal {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .15s;
+        }
+
+            .close-modal:hover {
+                background: var(--border);
+            }
+
+        .edit-profile-body {
+            padding: 28px;
+        }
+
+        .avatar-upload {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 28px;
+        }
+
+        .current-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--accent);
+            margin-bottom: 12px;
+        }
+
+        .avatar-placeholder {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+
+        .avatar-upload-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all .15s;
+        }
+
+            .avatar-upload-label:hover {
+                background: var(--accent-light);
+                border-color: var(--accent);
+                color: var(--accent);
+            }
+
+        #avatarInput {
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+            .form-label span {
+                color: #e74c3c;
+            }
+
+        .form-input,
+        .form-textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            transition: all .15s;
+        }
+
+            .form-input:focus,
+            .form-textarea:focus {
+                outline: none;
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px rgba(201,98,42,.1);
+            }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-note {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .edit-profile-footer {
+            padding: 16px 28px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn-cancel {
+            padding: 10px 24px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all .15s;
+        }
+
+            .btn-cancel:hover {
+                background: var(--border);
+            }
+
+        .btn-save {
+            padding: 10px 28px;
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all .15s;
+        }
+
+            .btn-save:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 14px rgba(201,98,42,.4);
+            }
+
+            .btn-save:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+
+        .alert-message {
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 20px;
+            display: none;
+        }
+
+            .alert-message.success {
+                background: #e9f5ec;
+                border: 1px solid #a9dfb4;
+                color: #2d7a3a;
+                display: block;
+            }
+
+            .alert-message.error {
+                background: #fdecea;
+                border: 1px solid rgba(192,57,43,.2);
+                color: #c0392b;
+                display: block;
+            }
+
+        @@media (max-width: 768px) {
+            .edit-profile-body {
+                padding: 20px;
+            }
+        }
+    </style>
+}
+
+<!-- PROFILE HERO -->
+<section class="hero">
+    <div class="hero-eyebrow">🐾 Hồ sơ thành viên</div>
+    @if (!string.IsNullOrEmpty(Model.User.AvatarPath))
+    {
+        <img class="hero-avatar" id="profileAvatar"
+             src="@Model.User.AvatarPath"
+             alt="@Model.User.Username" />
+    }
+    else
+    {
+        <div class="hero-avatar-placeholder" id="profileAvatarPlaceholder">
+            @Model.User.Username[0].ToString().ToUpper()
+        </div>
+    }
+    <h1 id="profileUsername">@Model.User.Username</h1>
+    <p class="hero-bio" id="profileBio">
+        @if (string.IsNullOrEmpty(Model.User.Bio))
+        {
+            <text>🐶 Thành viên tích cực của cộng đồng yêu mèo Việt Nam</text>
+        }
+        else
+        {
+            @Model.User.Bio
+        }
+    </p>
+    <div class="hero-stats">
+        <div class="stat-item">
+            <div class="stat-number">@Model.TotalPosts</div>
+            <div class="stat-label">Bài đăng</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">@Model.AdoptionPosts</div>
+            <div class="stat-label">Tìm nuôi</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">@Model.LostPosts</div>
+            <div class="stat-label">Thất lạc</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">@Model.SharePosts</div>
+            <div class="stat-label">Chia sẻ</div>
+        </div>
+    </div>
+    @if (isOwnProfile)
+    {
+        <button class="edit-profile-btn" onclick="openEditProfileModal()">
+            <i class="fa-solid fa-pen-to-square"></i>
+            Chỉnh sửa hồ sơ
+        </button>
+    }
+</section>
+
+<!-- MAIN CONTENT -->
+<div class="content-wrap">
+    <div>
+        <div class="profile-tabs">
+            <button class="tab-link active" id="tab-posts-link" onclick="switchProfileTab('posts')">Bài đăng của tôi</button>
+            <button class="tab-link" id="tab-bookmarks-link" onclick="switchProfileTab('bookmarks')">Đã lưu</button>
+        </div>
+
+        <!-- TAB BÀI ĐĂNG -->
+        <div id="tab-posts" class="tab-content" style="display: block;">
+            <div class="section-header">
+                <h2 class="section-title">Bài đăng gần đây</h2>
+                <span class="section-count">@Model.RecentPosts.Count bài</span>
+            </div>
+
+            <div class="post-list">
+                @if (Model.RecentPosts.Count == 0)
+                {
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <div class="empty-title">Chưa có bài đăng nào</div>
+                        <div class="empty-sub">Hãy đăng bài đầu tiên để chia sẻ với cộng đồng!</div>
+                        @if (isOwnProfile)
+                        {
+                            <button class="cta-btn" style="margin-top:20px;" onclick="openPostModal()">Đăng bài ngay</button>
+                        }
+                    </div>
+                }
+                else
+                {
+                    @foreach (var post in Model.RecentPosts)
+                    {
+                        var badgeClass = post.Type == "Adoption" ? "adopt" : (post.Type == "Thất lạc" ? "lost" : "share");
+                        var badgeLabel = post.Type == "Adoption" ? "Tìm nuôi" : (post.Type == "Thất lạc" ? "Thất lạc" : "Chia sẻ");
+                        var imgs = post.Images?.ToList();
+                        var hasImages = imgs != null && imgs.Any();
+                        var isSaved = bookmarkedByUser.Contains(post.Id);
+                        var cntComment = commentCounts.GetValueOrDefault(post.Id, 0);
+
+                        <div class="post-card">
+                            @if (hasImages)
+                            {
+                                var allPaths = imgs!.Select(i => "/" + i.ImagePath!.TrimStart('/')).ToList();
+                                var jsonPaths = System.Text.Json.JsonSerializer.Serialize(allPaths);
+
+                                if (imgs.Count == 1)
+                                {
+                                    <div class="post-images lb-trigger"
+                                         data-images='@Html.Raw(jsonPaths)'
+                                         data-index="0">
+                                        <img class="post-img-main"
+                                             src="/@imgs[0].ImagePath!.TrimStart('/')"
+                                             alt="@post.Title"
+                                             loading="lazy" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="post-images">
+                                        <div class="lb-trigger"
+                                             data-images='@Html.Raw(jsonPaths)'
+                                             data-index="0"
+                                             style="position:relative; cursor:pointer;">
+                                            <img class="post-img-main"
+                                                 src="/@imgs[0].ImagePath!.TrimStart('/')"
+                                                 alt="@post.Title"
+                                                 loading="lazy" />
+                                            <span class="post-img-more">+@(imgs.Count - 1) ảnh</span>
+                                        </div>
+                                        <div class="post-img-strip">
+                                            @for (int si = 1; si < Math.Min(imgs.Count, 4); si++)
+                                            {
+                                                <img class="lb-trigger"
+                                                     src="/@imgs[si].ImagePath!.TrimStart('/')"
+                                                     alt="Ảnh @(si + 1)"
+                                                     loading="lazy"
+                                                     data-images='@Html.Raw(jsonPaths)'
+                                                     data-index="@si" />
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            }
+
+                            <div class="post-body">
+                                <div class="post-meta">
+                                    <span class="type-badge @badgeClass">@badgeLabel</span>
+                                    <span class="post-date">@post.CreatedAt.ToString("dd/MM/yyyy")</span>
+                                </div>
+                                <div class="post-title">@post.Title</div>
+                                <div class="post-excerpt">@post.Content</div>
+
+                                <div class="post-footer">
+                                    <div class="post-actions">
+                                        <button class="action-btn @(isSaved ? "saved" : "")"
+                                                data-post-id="@post.Id"
+                                                onclick="toggleBookmark(this, @post.Id)">
+                                            @(isSaved ? "🔖 Đã lưu" : "🔖 Lưu bài")
+                                        </button>
+                                        <button class="action-btn"
+                                                id="cmt-btn-@post.Id"
+                                                onclick="toggleComments(this, @post.Id)">
+                                            <i class="fa-regular fa-comment"></i> <span class="cmt-count">@cntComment</span> bình luận
+                                        </button>
+                                    </div>
+                                    <a href="/UserPost/Details/@post.Id" class="read-more">Xem thêm →</a>
+                                </div>
+                            </div>
+
+                            <div class="comment-section" id="comments-@post.Id">
+                                <div class="comment-list" id="comment-list-@post.Id"></div>
+                                @if (isLoggedIn)
+                                {
+                                    <div class="comment-input-wrap">
+                                        <textarea class="comment-input" rows="1"
+                                                  id="comment-input-@post.Id"
+                                                  placeholder="Viết bình luận..."
+                                                  onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitComment(@post.Id);}"></textarea>
+                                        <button class="comment-submit" onclick="submitComment(@post.Id)">Gửi</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="comment-login-note">
+                                        <a href="#" onclick="openModal('login');return false;"
+                                           style="color:var(--accent);">Đăng nhập</a> để bình luận
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+        <!-- TAB ĐÃ LƯU -->
+        <div id="tab-bookmarks" class="tab-content" style="display: none;">
+            <div class="empty-state">
+                <div class="empty-icon">🔖</div>
+                <div class="empty-title">Chưa có bài nào được lưu</div>
+                <div class="empty-sub">Các bài đăng bạn đã lưu sẽ xuất hiện tại đây</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-card">
+            <div class="sidebar-card-title">Thông tin tài khoản</div>
+            <div class="quick-stat">
+                <span class="quick-stat-label">📅 Tham gia từ</span>
+                <span class="quick-stat-val">@Model.User.CreatedAt.ToString("MM/yyyy")</span>
+            </div>
+            <div class="quick-stat">
+                <span class="quick-stat-label">📧 Email</span>
+                <span class="quick-stat-val" id="profileEmail">@Model.User.Email</span>
+            </div>
+            @if (!string.IsNullOrEmpty(Model.User.PhoneNumber))
+            {
+                <div class="quick-stat">
+                    <span class="quick-stat-label">📞 Điện thoại</span>
+                    <span class="quick-stat-val" id="profilePhone">@Model.User.PhoneNumber</span>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.User.FullName))
+            {
+                <div class="quick-stat">
+                    <span class="quick-stat-label">👤 Họ tên</span>
+                    <span class="quick-stat-val" id="profileFullName">@Model.User.FullName</span>
+                </div>
+            }
+            <div class="quick-stat">
+                <span class="quick-stat-label">⭐ Vai trò</span>
+                <span class="quick-stat-val">@Model.User.Role</span>
+            </div>
+        </div>
+    </aside>
+</div>
+
+<!-- EDIT PROFILE MODAL -->
+<div id="editProfileModal" class="edit-profile-modal">
+    <div class="edit-profile-container">
+        <div class="edit-profile-header">
+            <h2>Chỉnh sửa <span>hồ sơ</span></h2>
+            <button class="close-modal" onclick="closeEditProfileModal()">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+
+        <div class="edit-profile-body">
+            <div id="editAlert" class="alert-message"></div>
+
+            <form id="editProfileForm" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+
+                <div class="avatar-upload">
+                    <div id="avatarPreview">
+                        @if (!string.IsNullOrEmpty(Model.User.AvatarPath))
+                        {
+                            <img id="previewAvatar" class="current-avatar" src="@Model.User.AvatarPath" alt="Avatar" />
+                        }
+                        else
+                        {
+                            <div id="previewAvatarPlaceholder" class="avatar-placeholder">
+                                @Model.User.Username[0].ToString().ToUpper()
+                            </div>
+                        }
+                    </div>
+                    <label class="avatar-upload-label" for="avatarInput">
+                        <i class="fa-solid fa-camera"></i>
+                        Thay đổi ảnh đại diện
+                    </label>
+                    <input type="file" id="avatarInput" name="avatar" accept="image/*" />
+                    <div class="form-note">Chấp nhận JPG, PNG, GIF, WEBP (tối đa 5MB)</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Tên đăng nhập <span>*</span></label>
+                    <input type="text" id="editUsername" name="username" class="form-input" required />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Email <span>*</span></label>
+                    <input type="email" id="editEmail" name="email" class="form-input" required />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Họ và tên</label>
+                    <input type="text" id="editFullName" name="fullName" class="form-input" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Số điện thoại</label>
+                    <input type="tel" id="editPhoneNumber" name="phoneNumber" class="form-input" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Giới thiệu về bạn</label>
+                    <textarea id="editBio" name="bio" class="form-textarea" rows="3"
+                              placeholder="Chia sẻ một chút về bản thân và tình yêu với thú cưng..."></textarea>
+                </div>
+            </form>
+        </div>
+
+        <div class="edit-profile-footer">
+            <button class="btn-cancel" onclick="closeEditProfileModal()">Hủy</button>
+            <button class="btn-save" onclick="saveProfile()">Lưu thay đổi</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // ==================== EDIT PROFILE MODAL ====================
+        function openEditProfileModal() {
+            fetch('/Account/GetProfileData')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('editUsername').value = data.username;
+                        document.getElementById('editEmail').value = data.email;
+                        document.getElementById('editBio').value = data.bio || '';
+                        document.getElementById('editFullName').value = data.fullName || '';
+                        document.getElementById('editPhoneNumber').value = data.phoneNumber || '';
+
+                        document.getElementById('editProfileModal').classList.add('active');
+                        document.body.style.overflow = 'hidden';
+                    } else {
+                        alert(data.message);
+                    }
+                });
+        }
+
+        function closeEditProfileModal() {
+            document.getElementById('editProfileModal').classList.remove('active');
+            document.body.style.overflow = '';
+            document.getElementById('editAlert').className = 'alert-message';
+            document.getElementById('editAlert').style.display = 'none';
+        }
+
+        // Avatar preview
+        document.getElementById('avatarInput')?.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewDiv = document.getElementById('avatarPreview');
+                    previewDiv.innerHTML = `<img id="previewAvatar" class="current-avatar" src="${e.target.result}" alt="Avatar Preview" />`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        async function saveProfile() {
+            const form = document.getElementById('editProfileForm');
+            const formData = new FormData(form);
+
+            const username = formData.get('username')?.trim();
+            const email = formData.get('email')?.trim();
+
+            if (!username) {
+                showEditAlert('Vui lòng nhập tên đăng nhập', 'error');
+                return;
+            }
+            if (!email) {
+                showEditAlert('Vui lòng nhập email', 'error');
+                return;
+            }
+
+            const saveBtn = document.querySelector('.btn-save');
+            const originalText = saveBtn.textContent;
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Đang lưu...';
+
+            try {
+                const response = await fetch('/Account/UpdateProfile', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showEditAlert(data.message, 'success');
+
+                    // Update profile UI
+                    document.getElementById('profileUsername').textContent = username;
+                    document.getElementById('profileEmail').textContent = email;
+
+                    const bio = formData.get('bio');
+                    if (bio) {
+                        document.getElementById('profileBio').textContent = bio;
+                    }
+
+                    const fullName = formData.get('fullName');
+                    if (fullName) {
+                        const fullNameSpan = document.getElementById('profileFullName');
+                        if (fullNameSpan) fullNameSpan.textContent = fullName;
+                    }
+
+                    const phoneNumber = formData.get('phoneNumber');
+                    if (phoneNumber) {
+                        const phoneSpan = document.getElementById('profilePhone');
+                        if (phoneSpan) phoneSpan.textContent = phoneNumber;
+                    }
+
+                    // Update avatar
+                    const avatarFile = formData.get('avatar');
+                    if (avatarFile && avatarFile.size > 0) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const heroAvatar = document.querySelector('.hero-avatar');
+                            const heroPlaceholder = document.querySelector('.hero-avatar-placeholder');
+                            if (heroAvatar) {
+                                heroAvatar.src = e.target.result;
+                            }
+                            if (heroPlaceholder) {
+                                heroPlaceholder.style.display = 'none';
+                                if (!heroAvatar) {
+                                    const newAvatar = document.createElement('img');
+                                    newAvatar.className = 'hero-avatar';
+                                    newAvatar.src = e.target.result;
+                                    heroPlaceholder.parentNode.insertBefore(newAvatar, heroPlaceholder);
+                                    heroPlaceholder.style.display = 'none';
+                                }
+                            }
+                        };
+                        reader.readAsDataURL(avatarFile);
+                    }
+
+                    setTimeout(() => {
+                        closeEditProfileModal();
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showEditAlert(data.message, 'error');
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = originalText;
+                }
+            } catch (error) {
+                showEditAlert('Có lỗi xảy ra, vui lòng thử lại.', 'error');
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
+            }
+        }
+
+        function showEditAlert(message, type) {
+            const alertDiv = document.getElementById('editAlert');
+            alertDiv.textContent = message;
+            alertDiv.className = `alert-message ${type}`;
+            alertDiv.style.display = 'block';
+
+            setTimeout(() => {
+                alertDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        // ==================== SWITCH TABS ====================
+        function switchProfileTab(tab) {
+            var allLinks = document.querySelectorAll('.tab-link');
+            for (var i = 0; i < allLinks.length; i++) {
+                allLinks[i].classList.remove('active');
+            }
+
+            var allContents = document.querySelectorAll('.tab-content');
+            for (var j = 0; j < allContents.length; j++) {
+                allContents[j].style.display = 'none';
+            }
+
+            if (tab === 'posts') {
+                document.getElementById('tab-posts-link').classList.add('active');
+                document.getElementById('tab-posts').style.display = 'block';
+            } else if (tab === 'bookmarks') {
+                document.getElementById('tab-bookmarks-link').classList.add('active');
+                document.getElementById('tab-bookmarks').style.display = 'block';
+                loadBookmarks();
+            }
+        }
+
+        // ==================== LOAD BOOKMARKS ====================
+        function loadBookmarks() {
+            var container = document.getElementById('tab-bookmarks');
+            if (!container.querySelector('.empty-state')) return;
+
+            fetch('/Bookmark/List')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.posts && data.posts.length > 0) {
+                        container.innerHTML = '<div class="post-list"></div>';
+                        var list = container.querySelector('.post-list');
+                        data.posts.forEach(function(post) {
+                            list.appendChild(buildBookmarkPost(post));
+                        });
+                    }
+                });
+        }
+
+        function buildBookmarkPost(post) {
+            var div = document.createElement('div');
+            div.className = 'post-card';
+            div.innerHTML = `
+                <div class="post-body">
+                    <div class="post-meta">
+                        <span class="type-badge ${getBadgeClass(post.Type)}">${getBadgeLabel(post.Type)}</span>
+                        <span class="post-date">${new Date(post.CreatedAt).toLocaleDateString('vi-VN')}</span>
+                    </div>
+                    <div class="post-title">${escapeHtml(post.Title)}</div>
+                    <div class="post-excerpt">${escapeHtml(post.Content)}</div>
+                    <div class="post-footer">
+                        <div class="post-actions">
+                            <button class="action-btn saved" onclick="toggleBookmark(this, ${post.Id})">🔖 Đã lưu</button>
+                            <button class="action-btn" onclick="toggleComments(this, ${post.Id})">
+                                <i class="fa-regular fa-comment"></i> <span class="cmt-count">${post.CommentCount || 0}</span> bình luận
+                            </button>
+                        </div>
+                        <a href="/UserPost/Details/${post.Id}" class="read-more">Xem thêm →</a>
+                    </div>
+                </div>
+                <div class="comment-section" id="comments-${post.Id}">
+                    <div class="comment-list" id="comment-list-${post.Id}"></div>
+                    ${@isLoggedIn.ToString().ToLower() ? `
+                        <div class="comment-input-wrap">
+                            <textarea class="comment-input" rows="1" id="comment-input-${post.Id}" placeholder="Viết bình luận..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitComment(${post.Id});}"></textarea>
+                            <button class="comment-submit" onclick="submitComment(${post.Id})">Gửi</button>
+                        </div>
+                    ` : `
+                        <div class="comment-login-note">
+                            <a href="#" onclick="openModal('login');return false;" style="color:var(--accent);">Đăng nhập</a> để bình luận
+                        </div>
+                    `}
+                </div>
+            `;
+            return div;
+        }
+
+        function getBadgeClass(type) {
+            if (type === 'Adoption') return 'adopt';
+            if (type === 'Thất lạc') return 'lost';
+            return 'share';
+        }
+
+        function getBadgeLabel(type) {
+            if (type === 'Adoption') return 'Tìm nuôi';
+            if (type === 'Thất lạc') return 'Thất lạc';
+            return 'Chia sẻ';
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // ==================== BOOKMARK FUNCTIONS ====================
+        function toggleBookmark(btn, postId) {
+            fetch('/Bookmark/Toggle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: 'postId=' + postId
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) {
+                        openModal('login');
+                        return;
+                    }
+                    if (data.saved) {
+                        btn.classList.add('saved');
+                        btn.textContent = '🔖 Đã lưu';
+                    } else {
+                        btn.classList.remove('saved');
+                        btn.textContent = '🔖 Lưu bài';
+                    }
+                });
+        }
+
+        // ==================== COMMENT FUNCTIONS ====================
+        function toggleComments(btn, postId) {
+            var section = document.getElementById('comments-' + postId);
+            var opening = !section.classList.contains('open');
+            section.classList.toggle('open');
+            btn.classList.toggle('cmt-open');
+            if (opening && document.getElementById('comment-list-' + postId).innerHTML === '') {
+                loadComments(postId);
+            }
+        }
+
+        function loadComments(postId) {
+            fetch('/Comment/List?postId=' + postId)
+                .then(res => res.json())
+                .then(comments => {
+                    var list = document.getElementById('comment-list-' + postId);
+                    list.innerHTML = '';
+                    if (comments.length === 0) {
+                        list.innerHTML = '<p style="font-size:13px;color:var(--text-muted);text-align:center;padding:8px 0 4px;">Chưa có bình luận nào.</p>';
+                        return;
+                    }
+                    comments.forEach(c => { list.appendChild(buildComment(c)); });
+                });
+        }
+
+        function buildComment(c) {
+            var div = document.createElement('div');
+            div.className = 'comment-item';
+            div.innerHTML =
+                '<div class="comment-avatar">' + escapeHtml(c.username[0].toUpperCase()) + '</div>' +
+                '<div class="comment-bubble">' +
+                '<div class="comment-username">' + escapeHtml(c.username) + '</div>' +
+                '<div class="comment-text">' + escapeHtml(c.content) + '</div>' +
+                '<div class="comment-time">' + c.createdAt + '</div>' +
+                '</div>';
+            return div;
+        }
+
+        function submitComment(postId) {
+            var input = document.getElementById('comment-input-' + postId);
+            var content = input.value.trim();
+            if (!content) return;
+            fetch('/Comment/Add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'postId=' + postId + '&content=' + encodeURIComponent(content)
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) return;
+                    var list = document.getElementById('comment-list-' + postId);
+                    var placeholder = list.querySelector('p');
+                    if (placeholder) placeholder.remove();
+                    list.appendChild(buildComment(data));
+                    input.value = '';
+                    var btn = document.getElementById('cmt-btn-' + postId);
+                    var span = btn ? btn.querySelector('.cmt-count') : null;
+                    if (span) span.textContent = parseInt(span.textContent || '0') + 1;
+                });
+        }
+
+        // Close modal on outside click
+        document.getElementById('editProfileModal')?.addEventListener('click', function(e) {
+            if (e.target === this) closeEditProfileModal();
+        });
+
+        // Close modal on ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeEditProfileModal();
+            }
+        });
+    </script>
+}

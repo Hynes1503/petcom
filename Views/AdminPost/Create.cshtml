@@ -1,0 +1,206 @@
+﻿@model petcomm.Models.Post
+@{
+    ViewData["Title"] = "Thêm bài đăng";
+    Layout = "_AdminLayout";
+    ViewData["ActiveMenu"] = "posts";
+}
+
+<style>
+    .form-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+        max-width: 680px;
+    }
+
+    .form-card-header {
+        padding: 22px 28px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface-2);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .form-card-icon {
+        width: 38px;
+        height: 38px;
+        background: var(--accent-light);
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+    }
+
+    .form-card-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .form-card-subtitle {
+        font-size: 12.5px;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+
+    .form-body {
+        padding: 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+    }
+
+    textarea.form-control {
+        resize: vertical;
+        min-height: 130px;
+    }
+
+    .file-upload-area {
+        border: 2px dashed var(--border);
+        border-radius: var(--radius-sm);
+        padding: 24px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.15s;
+        background: var(--surface-2);
+        position: relative;
+    }
+
+        .file-upload-area:hover {
+            border-color: var(--accent);
+            background: var(--accent-light);
+        }
+
+        .file-upload-area input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+    .upload-icon {
+        font-size: 28px;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .upload-text {
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+    }
+
+    .upload-hint {
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+
+    .form-footer {
+        padding: 20px 28px;
+        border-top: 1px solid var(--border);
+        background: var(--surface-2);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-bottom: 22px;
+    }
+
+        .breadcrumb a {
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+
+            .breadcrumb a:hover {
+                color: var(--accent);
+            }
+
+        .breadcrumb .sep {
+            opacity: 0.4;
+        }
+
+        .breadcrumb .current {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+</style>
+
+<div class="breadcrumb">
+    <a href="/AdminPost">Bài đăng</a>
+    <span class="sep">›</span>
+    <span class="current">Thêm mới</span>
+</div>
+
+<h1 class="page-title" style="margin-bottom:24px;">Thêm bài đăng mới</h1>
+
+<div class="form-card">
+    <div class="form-card-header">
+        <div class="form-card-icon">📝</div>
+        <div>
+            <div class="form-card-title">Thông tin bài đăng</div>
+            <div class="form-card-subtitle">Điền đầy đủ thông tin bên dưới để tạo bài đăng mới</div>
+        </div>
+    </div>
+
+    <form asp-action="Create" method="post" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+
+        <div class="form-body">
+            <div class="form-group">
+                <label class="form-label">Tiêu đề bài đăng <span style="color:var(--accent)">*</span></label>
+                <input asp-for="Title" class="form-control" placeholder="Nhập tiêu đề bài đăng..." />
+                <span asp-validation-for="Title" style="font-size:12px; color:var(--red);"></span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Nội dung <span style="color:var(--accent)">*</span></label>
+                <textarea asp-for="Content" class="form-control" placeholder="Mô tả chi tiết về bài đăng..."></textarea>
+                <span asp-validation-for="Content" style="font-size:12px; color:var(--red);"></span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Loại bài đăng</label>
+                <select asp-for="Type" class="form-control">
+                    <option value="Chia sẻ">🤝 Chia sẻ / Cộng đồng</option>
+                    <option value="Adoption">🏠 Tìm nuôi (Adoption)</option>
+                    <option value="Thất lạc">🔍 Thất lạc / Tìm chủ</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Hình ảnh đính kèm</label>
+                <div class="file-upload-area">
+                    <input type="file" name="images" multiple accept="image/*" />
+                    <span class="upload-icon">🖼️</span>
+                    <div class="upload-text">Kéo thả ảnh vào đây hoặc nhấn để chọn</div>
+                    <div class="upload-hint">Hỗ trợ PNG, JPG, WEBP — có thể chọn nhiều ảnh</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <button type="submit" class="btn btn-primary">💾 Lưu bài đăng</button>
+            <a asp-action="Index" class="btn btn-ghost">Hủy</a>
+        </div>
+    </form>
+</div>

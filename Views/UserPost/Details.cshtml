@@ -1,0 +1,2463 @@
+﻿@model petcomm.Models.Post
+@{
+    ViewData["Title"] = Model.Title + " — PetComm";
+    Layout = "_Layout";
+
+    var isLoggedIn = Context.Session.GetInt32("UserId") != null;
+    var currentUserId = Context.Session.GetInt32("UserId");
+    var isBookmarked = ViewBag.IsBookmarked ?? false;
+    var isOwnPost = ViewBag.IsOwnPost ?? false;
+    var relatedPosts = ViewBag.RelatedPosts as List<petcomm.Models.Post> ?? new List<petcomm.Models.Post>();
+    var images = Model.Images?.ToList() ?? new List<petcomm.Models.PostImage>();
+}
+
+@section Styles {
+    <style>
+        /* Hero Section cho chi tiết bài viết */
+        .post-detail-hero {
+            background: linear-gradient(135deg, #1c1a17 0%, #2e2419 60%, #3d2d18 100%);
+            padding: 48px 32px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .post-detail-hero::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: radial-gradient(ellipse 70% 60% at 60% 50%, rgba(201,98,42,.18) 0%, transparent 70%);
+                pointer-events: none;
+            }
+
+        .post-detail-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(201,98,42,.15);
+            border: 1px solid rgba(201,98,42,.3);
+            color: #e8892e;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 12.5px;
+            font-weight: 600;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+
+        .post-detail-hero h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 46px;
+            color: #fff;
+            line-height: 1.2;
+            margin-bottom: 16px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .post-detail-meta {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+            color: rgba(255,255,255,.6);
+            font-size: 14px;
+        }
+
+        .post-detail-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Main content */
+        .detail-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 48px 24px;
+        }
+
+        .post-content {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            margin-bottom: 48px;
+        }
+
+        /* Image gallery */
+        .post-gallery {
+            background: #000;
+            position: relative;
+        }
+
+        .gallery-main {
+            width: 100%;
+            height: 500px;
+            object-fit: contain;
+            background: #1a1a1a;
+            cursor: pointer;
+        }
+
+        .gallery-thumbnails {
+            display: flex;
+            gap: 8px;
+            padding: 12px;
+            background: rgba(0,0,0,.8);
+            overflow-x: auto;
+        }
+
+        .gallery-thumb {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            cursor: pointer;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            transition: all .15s;
+        }
+
+            .gallery-thumb.active {
+                border-color: var(--accent);
+                opacity: 1;
+            }
+
+            .gallery-thumb:hover {
+                opacity: .8;
+            }
+
+        /* Post info */
+        .post-info {
+            padding: 32px;
+        }
+
+        .post-actions-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .post-stats {
+            display: flex;
+            gap: 24px;
+        }
+
+        .post-stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .action-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text-secondary);
+            font-size: 13.5px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all .15s;
+            text-decoration: none;
+        }
+
+            .action-button:hover {
+                background: var(--accent-light);
+                border-color: var(--accent);
+                color: var(--accent);
+            }
+
+            .action-button.bookmarked {
+                background: #fff8e1;
+                border-color: #f59e0b;
+                color: #d97706;
+            }
+
+            .action-button.adopt {
+                background: var(--accent);
+                border-color: var(--accent);
+                color: #fff;
+            }
+
+                .action-button.adopt:hover {
+                    background: var(--accent-hover);
+                    transform: translateY(-1px);
+                }
+
+            .action-button.delete {
+                background: #fee;
+                border-color: #e74c3c;
+                color: #e74c3c;
+            }
+
+                .action-button.delete:hover {
+                    background: #e74c3c;
+                    border-color: #e74c3c;
+                    color: #fff;
+                }
+
+            .action-button.adopted {
+                background: #e9f5ec;
+                border-color: #2d7a3a;
+                color: #2d7a3a;
+                cursor: default;
+            }
+
+        .post-body {
+            font-size: 16px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            margin: 24px 0;
+        }
+
+            .post-body p {
+                margin-bottom: 1.2em;
+            }
+
+        /* Author info */
+        .author-info {
+            background: var(--surface-2);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin: 32px 0;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .author-avatar {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .author-details h3 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .author-details p {
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        /* Comments section */
+        .comments-section {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            padding: 32px;
+            margin-top: 32px;
+        }
+
+        .comments-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 24px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .comment-item {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding: 16px;
+            background: var(--surface-2);
+            border-radius: var(--radius);
+        }
+
+        .comment-avatar {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+            .comment-avatar img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+        .comment-bubble {
+            flex: 1;
+        }
+
+        .comment-username {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .comment-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+
+        .comment-time {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .comment-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+        }
+
+        .reply-btn, .toggle-replies-btn, .report-comment-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 12px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all .15s;
+        }
+
+            .reply-btn:hover, .toggle-replies-btn:hover, .report-comment-btn:hover {
+                background: var(--surface);
+                color: var(--accent);
+            }
+
+            .report-comment-btn:hover {
+                color: #e74c3c;
+            }
+
+        .reply-form {
+            margin-top: 12px;
+            padding: 12px;
+            background: var(--surface);
+            border-radius: var(--radius-sm);
+        }
+
+        .reply-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            resize: vertical;
+            margin-bottom: 8px;
+        }
+
+            .reply-input:focus {
+                outline: none;
+                border-color: var(--accent);
+            }
+
+        .reply-form-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .reply-cancel, .reply-submit {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all .15s;
+        }
+
+        .reply-cancel {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+            .reply-cancel:hover {
+                background: var(--border);
+            }
+
+        .reply-submit {
+            background: var(--accent);
+            border: none;
+            color: #fff;
+        }
+
+            .reply-submit:hover {
+                background: var(--accent-hover);
+            }
+
+        .replies-container {
+            margin-top: 12px;
+            padding-left: 20px;
+            border-left: 2px solid var(--border);
+        }
+
+        .reply-item {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+            padding: 8px;
+            background: var(--surface);
+            border-radius: var(--radius-sm);
+        }
+
+        .reply-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: #fff;
+            overflow: hidden;
+        }
+
+            .reply-avatar img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+        .reply-content {
+            flex: 1;
+        }
+
+        .reply-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 4px;
+        }
+
+        .reply-username {
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--text-primary);
+        }
+
+        .reply-time {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .reply-edited {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .reply-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .reply-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .reply-action-btn {
+            background: none;
+            border: none;
+            font-size: 11px;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+            .reply-action-btn:hover {
+                background: var(--surface-2);
+                color: var(--accent);
+            }
+
+        .no-replies {
+            padding: 8px 0;
+            color: var(--text-muted);
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .comment-input-area {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        .comment-textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            resize: vertical;
+            margin-bottom: 12px;
+        }
+
+            .comment-textarea:focus {
+                outline: none;
+                border-color: var(--accent);
+            }
+
+        .comment-submit-btn {
+            padding: 10px 24px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 500;
+            cursor: pointer;
+            transition: background .15s;
+        }
+
+            .comment-submit-btn:hover {
+                background: var(--accent-hover);
+            }
+
+        /* Related posts */
+        .related-posts {
+            margin-top: 48px;
+        }
+
+        .related-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 24px;
+            margin-bottom: 24px;
+        }
+
+        .related-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        .related-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: transform .2s;
+            text-decoration: none;
+            color: inherit;
+        }
+
+            .related-card:hover {
+                transform: translateY(-4px);
+                box-shadow: var(--shadow-md);
+            }
+
+            .related-card img {
+                width: 100%;
+                height: 160px;
+                object-fit: cover;
+            }
+
+        .related-card-content {
+            padding: 16px;
+        }
+
+        .related-card-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+
+        .related-card-date {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Adoption Request Modal */
+        .adopt-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(28,26,23,.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(6px);
+            padding: 20px;
+        }
+
+            .adopt-modal-overlay.active {
+                display: flex;
+            }
+
+        .adopt-modal {
+            background: var(--surface);
+            border-radius: 18px;
+            width: 100%;
+            max-width: 650px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: var(--shadow-md);
+        }
+
+        .adopt-modal-header {
+            padding: 24px 28px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: var(--surface);
+            z-index: 1;
+        }
+
+        .adopt-modal-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 22px;
+            color: var(--text-primary);
+        }
+
+            .adopt-modal-title span {
+                color: var(--accent);
+            }
+
+        .adopt-modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .15s;
+        }
+
+            .adopt-modal-close:hover {
+                background: var(--border);
+            }
+
+        .adopt-modal-body {
+            padding: 24px 28px;
+        }
+
+        .post-info-preview {
+            background: var(--surface-2);
+            padding: 16px;
+            border-radius: var(--radius);
+            margin-bottom: 24px;
+        }
+
+            .post-info-preview h4 {
+                margin-bottom: 8px;
+                color: var(--accent);
+            }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+            .form-label span {
+                color: #e74c3c;
+            }
+
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            transition: all .15s;
+        }
+
+            .form-input:focus, .form-textarea:focus, .form-select:focus {
+                outline: none;
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px rgba(201,98,42,.1);
+            }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+            .checkbox-group input {
+                width: 18px;
+                height: 18px;
+                cursor: pointer;
+            }
+
+        .row-2cols {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .adopt-modal-footer {
+            padding: 16px 28px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn-cancel {
+            padding: 10px 24px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface-2);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all .15s;
+        }
+
+            .btn-cancel:hover {
+                background: var(--border);
+            }
+
+        .btn-submit-adopt {
+            padding: 10px 28px;
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all .15s;
+        }
+
+            .btn-submit-adopt:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 14px rgba(201,98,42,.4);
+            }
+
+        .alert-message {
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 20px;
+            display: none;
+        }
+
+            .alert-message.success {
+                background: #e9f5ec;
+                border: 1px solid #a9dfb4;
+                color: #2d7a3a;
+                display: block;
+            }
+
+            .alert-message.error {
+                background: #fdecea;
+                border: 1px solid rgba(192,57,43,.2);
+                color: #c0392b;
+                display: block;
+            }
+
+        /* Edit Modal Styles */
+        .edit-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(28,26,23,.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(6px);
+            padding: 20px;
+        }
+
+            .edit-modal-overlay.active {
+                display: flex;
+            }
+
+        .edit-modal {
+            background: var(--surface);
+            border-radius: 18px;
+            width: 100%;
+            max-width: 650px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: var(--shadow-md);
+        }
+
+        .edit-modal-header {
+            padding: 24px 28px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: var(--surface);
+            z-index: 1;
+        }
+
+        .edit-modal-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 22px;
+            color: var(--text-primary);
+        }
+
+            .edit-modal-title span {
+                color: var(--accent);
+            }
+
+        .edit-modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .15s;
+        }
+
+            .edit-modal-close:hover {
+                background: var(--border);
+            }
+
+        .edit-modal-body {
+            padding: 24px 28px;
+        }
+
+        .type-selector-edit {
+            display: flex;
+            gap: 8px;
+        }
+
+        .type-option-edit {
+            flex: 1;
+            padding: 10px 8px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface-2);
+            cursor: pointer;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: all .15s;
+        }
+
+            .type-option-edit:hover {
+                border-color: var(--accent);
+                color: var(--accent);
+            }
+
+            .type-option-edit.selected {
+                border-color: var(--accent);
+                background: var(--accent-light);
+                color: var(--accent);
+            }
+
+        .existing-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .existing-img-item {
+            position: relative;
+            width: 100px;
+            height: 100px;
+        }
+
+            .existing-img-item img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                border-radius: 8px;
+                border: 1px solid var(--border);
+            }
+
+        .remove-existing-img {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #e74c3c;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .img-upload-zone-edit {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-sm);
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all .15s;
+            background: var(--surface-2);
+            position: relative;
+            margin-top: 12px;
+        }
+
+            .img-upload-zone-edit:hover {
+                border-color: var(--accent);
+                background: var(--accent-light);
+            }
+
+            .img-upload-zone-edit input {
+                position: absolute;
+                inset: 0;
+                opacity: 0;
+                cursor: pointer;
+            }
+
+        .img-preview-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .img-preview-item {
+            position: relative;
+            width: 74px;
+            height: 74px;
+        }
+
+            .img-preview-item img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                border-radius: 8px;
+                border: 1px solid var(--border);
+            }
+
+        .remove-img {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #e74c3c;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+        }
+
+        .edit-modal-footer {
+            padding: 16px 28px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .edit-cancel-btn {
+            padding: 10px 24px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface-2);
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .edit-save-btn {
+            padding: 10px 28px;
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .edit-message {
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 20px;
+            display: none;
+        }
+
+            .edit-message.success {
+                background: #e9f5ec;
+                border: 1px solid #a9dfb4;
+                color: #2d7a3a;
+                display: block;
+            }
+
+            .edit-message.error {
+                background: #fdecea;
+                border: 1px solid rgba(192,57,43,.2);
+                color: #c0392b;
+                display: block;
+            }
+
+        .confirm-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+            .confirm-modal.active {
+                display: flex;
+            }
+
+        .confirm-dialog {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 32px;
+            max-width: 400px;
+            text-align: center;
+        }
+
+            .confirm-dialog h3 {
+                margin-bottom: 16px;
+            }
+
+            .confirm-dialog p {
+                margin-bottom: 24px;
+                color: var(--text-secondary);
+            }
+
+        .confirm-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .confirm-btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+            .confirm-btn.cancel {
+                background: var(--surface-2);
+                color: var(--text-secondary);
+            }
+
+            .confirm-btn.confirm {
+                background: #e74c3c;
+                color: #fff;
+            }
+
+        @@media (max-width: 768px) {
+            .post-detail-hero h1 {
+                font-size: 32px;
+            }
+
+            .gallery-main {
+                height: 300px;
+            }
+
+            .post-info {
+                padding: 20px;
+            }
+
+            .row-2cols {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+}
+
+<!-- Hero Section -->
+<section class="post-detail-hero">
+    <div class="post-detail-badge">
+        @if (Model.Type == "Adoption")
+        {
+            <i class="fa-solid fa-cat"></i> <span>Tìm nuôi</span>
+        }
+        else if (Model.Type == "Thất lạc")
+        {
+            <i class="fa-solid fa-magnifying-glass"></i> <span>Thất lạc</span>
+        }
+        else
+        {
+            <i class="fa-solid fa-people-group"></i> <span>Chia sẻ cộng đồng</span>
+        }
+    </div>
+    <h1>@Model.Title</h1>
+    <div class="post-detail-meta">
+        <div class="post-detail-meta-item">
+            <i class="fa-regular fa-user"></i>
+            <span>@(Model.User?.Username ?? "Người dùng")</span>
+        </div>
+        <div class="post-detail-meta-item">
+            <i class="fa-regular fa-calendar"></i>
+            <span>@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm")</span>
+        </div>
+        <div class="post-detail-meta-item">
+            <i class="fa-regular fa-eye"></i>
+            <span>@Model.ViewCount lượt xem</span>
+        </div>
+    </div>
+</section>
+
+<div class="detail-container">
+    <article class="post-content">
+        <!-- Gallery -->
+        @if (images.Any())
+        {
+            <div class="post-gallery">
+                <img class="gallery-main" id="mainImage" src="@images[0].ImagePath" alt="Main image" />
+                @if (images.Count > 1)
+                {
+                    <div class="gallery-thumbnails">
+                        @foreach (var img in images)
+                        {
+                            <img class="gallery-thumb" src="@img.ImagePath" alt="Thumbnail"
+                                 onclick="changeImage(this.src)" />
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="post-info">
+            <div class="post-actions-bar">
+                <div class="post-stats">
+                    <div class="post-stat">
+                        <i class="fa-regular fa-comment"></i>
+                        <span id="totalComments">@(Model.Comments?.Count ?? 0) bình luận</span>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button class="action-button @(isBookmarked ? "bookmarked" : "")"
+                            onclick="toggleBookmark(@Model.Id, this)">
+                        <i class="fa-regular @(isBookmarked ? "fa-bookmark" : "fa-bookmark")"></i>
+                        <span>@(isBookmarked ? "Đã lưu" : "Lưu bài")</span>
+                    </button>
+
+                    @if (isLoggedIn && !isOwnPost)
+                    {
+                        <button class="action-button report" onclick="openPostReport(@Model.Id)">
+                            <i class="fa-regular fa-flag"></i>
+                            <span>Báo cáo</span>
+                        </button>
+                    }
+                    else if (!isLoggedIn)
+                    {
+                        <button class="action-button report" onclick="openModal('login')">
+                            <i class="fa-regular fa-flag"></i>
+                            <span>Báo cáo</span>
+                        </button>
+                    }
+
+                    @if (Model.Type == "Adoption" && !isOwnPost && Model.Status != "Adopted" && isLoggedIn)
+                    {
+                        <button class="action-button adopt" onclick="openAdoptModal()">
+                            <i class="fa-solid fa-paw"></i> Nhận nuôi
+                        </button>
+                    }
+                    else if (Model.Type == "Adoption" && !isOwnPost && !isLoggedIn)
+                    {
+                        <button class="action-button adopt" onclick="openModal('login')">
+                            <i class="fa-solid fa-paw"></i> Đăng nhập để nhận nuôi
+                        </button>
+                    }
+
+                    @if (Model.Type == "Adoption" && isOwnPost && Model.Status != "Adopted")
+                    {
+                        <a href="/Adoption/ManageRequests?postId=@Model.Id" class="action-button">
+                            <i class="fa-solid fa-users"></i> Xem yêu cầu (@ViewBag.RequestCount)
+                        </a>
+                    }
+
+                    @if (Model.Type == "Adoption" && Model.Status == "Adopted")
+                    {
+                        <div class="action-button adopted">
+                            <i class="fa-solid fa-check-circle"></i> Đã nhận nuôi
+                        </div>
+                    }
+
+                    @if (isOwnPost)
+                    {
+                        <button class="action-button" onclick="openEditModal(@Model.Id)">
+                            <i class="fa-regular fa-pen-to-square"></i>
+                            <span>Sửa bài</span>
+                        </button>
+                        <button class="action-button delete" onclick="confirmDelete(@Model.Id)">
+                            <i class="fa-regular fa-trash-can"></i>
+                            <span>Xóa bài</span>
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <div class="post-body">
+                @Html.Raw(Model.Content.Replace("\n", "<br />"))
+            </div>
+
+            <div class="author-info">
+                <div class="author-avatar">
+                    @(Model.User?.Username?.FirstOrDefault().ToString().ToUpper() ?? "U")
+                </div>
+                <div class="author-details">
+                    <h3>@(Model.User?.Username ?? "Người dùng")</h3>
+                    <p>
+                        Thành viên từ
+                        @(Model.User != null
+                            ? Model.User.CreatedAt.ToString("MM/yyyy")
+                            : "tháng 1/2024")
+                    </p>
+                </div>
+            </div>
+        </div>
+    </article>
+
+    <!-- Comments Section -->
+    <div class="comments-section">
+        <h2 class="comments-title">
+            <i class="fa-regular fa-comment"></i> Bình luận
+        </h2>
+
+        <div id="commentsList">
+            <!-- Comments will be loaded here -->
+            <div style="text-align: center; padding: 32px; color: var(--text-muted);">
+                <i class="fa-solid fa-spinner fa-spin"></i> Đang tải bình luận...
+            </div>
+        </div>
+
+        <div class="comment-input-area">
+            @if (isLoggedIn)
+            {
+                <textarea id="commentContent" class="comment-textarea" rows="3"
+                          placeholder="Viết bình luận của bạn..."></textarea>
+                <button class="comment-submit-btn" onclick="submitNewComment(@Model.Id)">
+                    <i class="fa-regular fa-paper-plane"></i> Gửi bình luận
+                </button>
+            }
+            else
+            {
+                <p style="text-align: center;">
+                    <a href="#" onclick="openModal('login'); return false;" style="color: var(--accent);">
+                        Đăng nhập
+                    </a> để bình luận
+                </p>
+            }
+        </div>
+    </div>
+
+    <!-- Related Posts -->
+    @if (relatedPosts.Any())
+    {
+        <div class="related-posts">
+            <h2 class="related-title">Bài viết liên quan</h2>
+            <div class="related-grid">
+                @foreach (var related in relatedPosts)
+                {
+                    <a href="/UserPost/Details/@related.Id" class="related-card">
+                        @if (related.Images != null && related.Images.Any())
+                        {
+                            <img src="@related.Images.First().ImagePath" alt="@related.Title" />
+                        }
+                        else
+                        {
+                            <img src="/images/default-post.jpg" alt="Default image" />
+                        }
+                        <div class="related-card-content">
+                            <div class="related-card-title">@related.Title</div>
+                            <div class="related-card-date">@related.CreatedAt.ToString("dd/MM/yyyy")</div>
+                        </div>
+                    </a>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Adoption Request Modal -->
+<div id="adoptModal" class="adopt-modal-overlay">
+    <div class="adopt-modal">
+        <div class="adopt-modal-header">
+            <h2 class="adopt-modal-title">Gửi yêu cầu <span>nhận nuôi</span></h2>
+            <button class="adopt-modal-close" onclick="closeAdoptModal()">✕</button>
+        </div>
+
+        <div class="adopt-modal-body">
+            <div id="adoptAlert" class="alert-message"></div>
+
+            <div class="post-info-preview">
+                <h4>🐾 Bài viết: @Model.Title</h4>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">
+                    Đăng bởi: @Model.User?.Username
+                </p>
+            </div>
+
+            <form id="adoptForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="postId" value="@Model.Id" />
+
+                <div class="form-group">
+                    <label class="form-label">Lời nhắn <span>*</span></label>
+                    <textarea name="message" class="form-textarea" required
+                              placeholder="Giới thiệu về bản thân và lý do bạn muốn nhận nuôi bé..."></textarea>
+                </div>
+
+                <div class="row-2cols">
+                    <div class="form-group">
+                        <label class="form-label">Số điện thoại <span>*</span></label>
+                        <input type="tel" name="phoneNumber" class="form-input" required
+                               placeholder="Số điện thoại liên hệ" />
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Địa chỉ <span>*</span></label>
+                        <input type="text" name="address" class="form-input" required
+                               placeholder="Địa chỉ nơi bạn sinh sống" />
+                    </div>
+                </div>
+
+                <div class="row-2cols">
+                    <div class="form-group">
+                        <label class="form-label">Kinh nghiệm nuôi thú cưng</label>
+                        <select name="experience" class="form-select">
+                            <option value="">Chọn kinh nghiệm của bạn</option>
+                            <option value="Chưa từng nuôi">Chưa từng nuôi</option>
+                            <option value="Đã từng nuôi">Đã từng nuôi</option>
+                            <option value="Đang nuôi">Đang nuôi</option>
+                            <option value="Có kinh nghiệm chuyên sâu">Có kinh nghiệm chuyên sâu</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Loại nhà ở</label>
+                        <select name="housingType" class="form-select">
+                            <option value="">Chọn loại nhà ở</option>
+                            <option value="Chung cư">Chung cư</option>
+                            <option value="Nhà riêng">Nhà riêng</option>
+                            <option value="Biệt thự">Biệt thự</option>
+                            <option value="Khác">Khác</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" name="hasOtherPets" value="true" id="hasOtherPets" />
+                        <label for="hasOtherPets">Tôi hiện đang nuôi thú cưng khác</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Lý do muốn nhận nuôi</label>
+                    <textarea name="reason" class="form-textarea" rows="3"
+                              placeholder="Chia sẻ lý do bạn muốn nhận nuôi bé..."></textarea>
+                </div>
+            </form>
+        </div>
+
+        <div class="adopt-modal-footer">
+            <button class="btn-cancel" onclick="closeAdoptModal()">Hủy</button>
+            <button class="btn-submit-adopt" onclick="submitAdoptRequest()">Gửi yêu cầu</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Post Modal -->
+<div id="editModal" class="edit-modal-overlay">
+    <div class="edit-modal">
+        <div class="edit-modal-header">
+            <h2 class="edit-modal-title">Chỉnh sửa bài viết <span>✏️</span></h2>
+            <button class="edit-modal-close" onclick="closeEditModal()">✕</button>
+        </div>
+
+        <div class="edit-modal-body">
+            <div id="editMessage" class="edit-message"></div>
+
+            <form id="editForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="editPostId" name="id" />
+
+                <div class="form-group">
+                    <label class="form-label">Loại bài đăng</label>
+                    <div class="type-selector-edit" id="typeSelectorEdit">
+                        <button type="button" class="type-option-edit" data-value="Chia sẻ" onclick="selectEditType(this)">
+                            <i class="fa-solid fa-people-group"></i> Chia sẻ
+                        </button>
+                        <button type="button" class="type-option-edit" data-value="Adoption" onclick="selectEditType(this)">
+                            <i class="fa-solid fa-cat"></i> Tìm nuôi
+                        </button>
+                        <button type="button" class="type-option-edit" data-value="Thất lạc" onclick="selectEditType(this)">
+                            <i class="fa-solid fa-magnifying-glass"></i> Thất lạc
+                        </button>
+                    </div>
+                    <input type="hidden" id="editType" name="type" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Tiêu đề</label>
+                    <input type="text" id="editTitle" name="title" class="form-input"
+                           placeholder="Nhập tiêu đề bài viết..." maxlength="200" required />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Nội dung</label>
+                    <textarea id="editContent" name="content" class="form-textarea"
+                              rows="6" placeholder="Chia sẻ câu chuyện của bạn..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Hình ảnh hiện tại</label>
+                    <div id="existingImages" class="existing-images"></div>
+
+                    <label class="form-label">Thêm ảnh mới</label>
+                    <div class="img-upload-zone-edit" id="editUploadZone">
+                        <input type="file" id="editImages" name="images" multiple accept="image/*" />
+                        <span class="img-upload-icon">🖼️</span>
+                        <div class="img-upload-label">Nhấn hoặc kéo thả ảnh vào đây</div>
+                        <div class="img-upload-hint">PNG, JPG, WEBP — tối đa 10MB mỗi ảnh</div>
+                    </div>
+                    <div id="newImagesPreview" class="img-preview-grid"></div>
+                </div>
+            </form>
+        </div>
+
+        <div class="edit-modal-footer">
+            <button class="edit-cancel-btn" onclick="closeEditModal()">Hủy</button>
+            <button class="edit-save-btn" onclick="submitEdit()">Lưu thay đổi</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="confirm-modal">
+    <div class="confirm-dialog">
+        <h3>Xóa bài viết</h3>
+        <p>Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.</p>
+        <div class="confirm-buttons">
+            <button class="confirm-btn cancel" onclick="closeDeleteModal()">Hủy</button>
+            <button class="confirm-btn confirm" onclick="deletePost()">Xóa</button>
+        </div>
+    </div>
+</div>
+
+<!-- Report Modal (từ _ReportModal) -->
+<div id="reportModal" class="rp-overlay" style="display:none" onclick="if(event.target===this)closeReportModal()">
+    <div class="rp-box">
+        <div class="rp-header">
+            <div class="rp-header-left">
+                <span class="rp-flag-icon">🚩</span>
+                <div>
+                    <div class="rp-title" id="rp-title">Báo cáo vi phạm</div>
+                    <div class="rp-subtitle" id="rp-subtitle">Chọn lý do phù hợp</div>
+                </div>
+            </div>
+            <button onclick="closeReportModal()" class="rp-close">✕</button>
+        </div>
+
+        <div class="rp-body">
+            <p class="rp-help">Báo cáo của bạn sẽ được gửi đến đội ngũ kiểm duyệt. Chúng tôi cam kết xử lý trong 24 giờ.</p>
+            <div class="rp-reasons">
+                <label class="rp-reason"><input type="radio" name="rp-reason-radio" value="Spam" /><span class="rp-reason-inner"><span class="rp-reason-icon">🚫</span><span class="rp-reason-text"><strong>Spam</strong><small>Quảng cáo, nội dung lặp lại không liên quan</small></span></span></label>
+                <label class="rp-reason"><input type="radio" name="rp-reason-radio" value="Nội dung không phù hợp" /><span class="rp-reason-inner"><span class="rp-reason-icon">🔞</span><span class="rp-reason-text"><strong>Nội dung không phù hợp</strong><small>Hình ảnh/nội dung phản cảm, bạo lực</small></span></span></label>
+                <label class="rp-reason"><input type="radio" name="rp-reason-radio" value="Lừa đảo" /><span class="rp-reason-inner"><span class="rp-reason-icon">⚠️</span><span class="rp-reason-text"><strong>Lừa đảo</strong><small>Gian lận, chiếm đoạt tiền hoặc tài sản</small></span></span></label>
+                <label class="rp-reason"><input type="radio" name="rp-reason-radio" value="Thông tin sai" /><span class="rp-reason-inner"><span class="rp-reason-icon">❌</span><span class="rp-reason-text"><strong>Thông tin sai lệch</strong><small>Nội dung không chính xác, gây hiểu nhầm</small></span></span></label>
+                <label class="rp-reason"><input type="radio" name="rp-reason-radio" value="Ngôn ngữ thù địch" /><span class="rp-reason-inner"><span class="rp-reason-icon">💢</span><span class="rp-reason-text"><strong>Ngôn ngữ thù địch / Quấy rối</strong><small>Xúc phạm, đe doạ, bắt nạt người khác</small></span></span></label>
+                <label class="rp-reason"><input type="radio" name="rp-reason-radio" value="Khác" /><span class="rp-reason-inner"><span class="rp-reason-icon">📋</span><span class="rp-reason-text"><strong>Khác</strong><small>Lý do không có trong danh sách trên</small></span></span></label>
+            </div>
+            <div class="rp-desc-wrap">
+                <label class="rp-desc-label">Mô tả thêm <span class="rp-optional">(tuỳ chọn)</span></label>
+                <textarea id="rp-description" class="rp-desc-input" placeholder="Cung cấp thêm chi tiết để chúng tôi xử lý chính xác hơn..." rows="3"></textarea>
+            </div>
+        </div>
+
+        <div class="rp-footer">
+            <button onclick="closeReportModal()" class="rp-btn-cancel">Huỷ</button>
+            <button onclick="submitReport()" id="rp-submit-btn" class="rp-btn-submit">🚩 Gửi báo cáo</button>
+        </div>
+    </div>
+</div>
+
+<div id="rp-toast-container"></div>
+
+<style>
+    .rp-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.55);
+        backdrop-filter: blur(6px);
+        z-index: 9800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+    }
+
+    .rp-box {
+        background: #fff;
+        border-radius: 18px;
+        width: 100%;
+        max-width: 480px;
+        box-shadow: 0 24px 80px rgba(0,0,0,.25);
+        overflow: hidden;
+        animation: rpSlideUp .25s ease;
+    }
+
+    @@keyframes rpSlideUp {
+        from {
+            transform: translateY(16px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .rp-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 22px 16px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .rp-header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .rp-flag-icon {
+        font-size: 24px;
+    }
+
+    .rp-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #222;
+    }
+
+    .rp-subtitle {
+        font-size: 12px;
+        color: #999;
+        margin-top: 2px;
+    }
+
+    .rp-close {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #f5f5f5;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        color: #888;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background .15s;
+    }
+
+        .rp-close:hover {
+            background: #e8e8e8;
+        }
+
+    .rp-body {
+        padding: 18px 22px;
+    }
+
+    .rp-help {
+        font-size: 12.5px;
+        color: #999;
+        margin-bottom: 14px;
+        line-height: 1.5;
+    }
+
+    .rp-reasons {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        margin-bottom: 16px;
+    }
+
+    .rp-reason {
+        cursor: pointer;
+    }
+
+        .rp-reason input[type=radio] {
+            display: none;
+        }
+
+    .rp-reason-inner {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 11px 14px;
+        border-radius: 10px;
+        border: 2px solid #eee;
+        transition: all .15s;
+    }
+
+        .rp-reason-inner:hover {
+            border-color: #ddd;
+            background: #fafafa;
+        }
+
+    .rp-reason input:checked + .rp-reason-inner {
+        border-color: #e8892e;
+        background: #fff8f3;
+    }
+
+    .rp-reason-icon {
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+
+    .rp-reason-text {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+    }
+
+        .rp-reason-text strong {
+            font-size: 13.5px;
+            color: #222;
+        }
+
+        .rp-reason-text small {
+            font-size: 11.5px;
+            color: #999;
+        }
+
+    .rp-desc-wrap {
+        margin-top: 4px;
+    }
+
+    .rp-desc-label {
+        display: block;
+        font-size: 11.5px;
+        font-weight: 700;
+        color: #666;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+    }
+
+    .rp-optional {
+        font-weight: 400;
+        text-transform: none;
+        font-size: 11px;
+    }
+
+    .rp-desc-input {
+        width: 100%;
+        padding: 10px 13px;
+        border: 1.5px solid #e0e0e0;
+        border-radius: 10px;
+        font-family: inherit;
+        font-size: 13px;
+        color: #333;
+        resize: vertical;
+        outline: none;
+        transition: border-color .15s;
+        background: #fafafa;
+    }
+
+        .rp-desc-input:focus {
+            border-color: #e8892e;
+            background: #fff;
+        }
+
+    .rp-footer {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        padding: 14px 22px;
+        border-top: 1px solid #f0f0f0;
+        background: #fafafa;
+    }
+
+    .rp-btn-cancel {
+        padding: 9px 20px;
+        border-radius: 9px;
+        background: #f0f0f0;
+        border: 1px solid #e0e0e0;
+        color: #666;
+        font-size: 14px;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+        .rp-btn-cancel:hover {
+            background: #e8e8e8;
+        }
+
+    .rp-btn-submit {
+        padding: 9px 22px;
+        border-radius: 9px;
+        background: #e8892e;
+        border: none;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all .15s;
+    }
+
+        .rp-btn-submit:hover {
+            background: #cf7a26;
+        }
+
+        .rp-btn-submit:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+    /* Toast */
+    #rp-toast-container {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        pointer-events: none;
+    }
+
+    .rp-toast {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 18px;
+        border-radius: 10px;
+        font-size: 13.5px;
+        font-weight: 500;
+        box-shadow: 0 4px 20px rgba(0,0,0,.12);
+        max-width: 320px;
+        animation: rpToastIn .25s ease;
+    }
+
+    @@keyframes rpToastIn {
+        from {
+            transform: translateX(40px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    .rp-toast-success {
+        background: #e9f5ec;
+        border: 1px solid #a9dfb4;
+        color: #2d7a3a;
+    }
+
+    .rp-toast-error {
+        background: #fdecea;
+        border: 1px solid #f5c6cb;
+        color: #c0392b;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        let currentUserId = @(currentUserId ?? 0);
+        let activeReplyCommentId = null;
+
+        // Gallery image change
+        function changeImage(src) {
+            document.getElementById('mainImage').src = src;
+            document.querySelectorAll('.gallery-thumb').forEach(thumb => {
+                thumb.classList.remove('active');
+                if (thumb.src === src) {
+                    thumb.classList.add('active');
+                }
+            });
+        }
+
+        // Load comments on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadComments(@Model.Id);
+        });
+
+        // Load comments
+        function loadComments(postId) {
+            fetch('/Comment/List?postId=' + postId)
+                .then(res => res.json())
+                .then(comments => {
+                    const container = document.getElementById('commentsList');
+                    if (comments.length === 0) {
+                        container.innerHTML = '<p style="text-align: center; padding: 32px; color: var(--text-muted);">Chưa có bình luận nào. Hãy là người đầu tiên bình luận!</p>';
+                        return;
+                    }
+                    container.innerHTML = '';
+                    comments.forEach(comment => {
+                        container.appendChild(buildComment(comment));
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading comments:', error);
+                    document.getElementById('commentsList').innerHTML = '<p style="text-align: center; padding: 32px; color: var(--text-muted);">Lỗi tải bình luận</p>';
+                });
+        }
+
+        // Build comment HTML
+        function buildComment(comment) {
+            const div = document.createElement('div');
+            div.className = 'comment-item';
+            div.setAttribute('data-comment-id', comment.id);
+
+            const avatarHtml = comment.userAvatar
+                ? `<img src="${comment.userAvatar}" alt="${escapeHtml(comment.username)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`
+                : `<span>${escapeHtml(comment.username)[0].toUpperCase()}</span>`;
+
+            div.innerHTML = `
+                <div class="comment-avatar">
+                    ${avatarHtml}
+                </div>
+                <div class="comment-bubble">
+                    <div class="comment-username">${escapeHtml(comment.username)}</div>
+                    <div class="comment-text">${escapeHtml(comment.content)}</div>
+                    <div class="comment-time">${comment.createdAt}</div>
+                    <div class="comment-actions">
+                        <button class="reply-btn" onclick="showReplyForm(${comment.id})">
+                            <i class="fa-regular fa-reply"></i> Phản hồi
+                        </button>
+                        <button class="toggle-replies-btn" id="toggle-replies-${comment.id}" onclick="toggleReplies(${comment.id})">
+                            <i class="fa-regular fa-comment-dots"></i> Xem phản hồi (${comment.replyCount || 0})
+                        </button>
+        @if (isLoggedIn)
+        {
+                                <button class="report-comment-btn" onclick="openCommentReport(${comment.id})">
+                                    <i class="fa-regular fa-flag"></i> Báo cáo
+                                </button>
+        }
+                    </div>
+                    <div class="reply-form" id="reply-form-${comment.id}" style="display: none;">
+                        <textarea class="reply-input" id="reply-input-${comment.id}" rows="2" placeholder="Viết phản hồi..."></textarea>
+                        <div class="reply-form-actions">
+                            <button class="reply-cancel" onclick="showReplyForm(${comment.id})">Hủy</button>
+                            <button class="reply-submit" onclick="submitReply(${comment.id})">Gửi phản hồi</button>
+                        </div>
+                    </div>
+                    <div class="replies-container" id="replies-${comment.id}" style="display: none;"></div>
+                </div>
+            `;
+            return div;
+        }
+
+        // Submit new comment
+        function submitNewComment(postId) {
+            const content = document.getElementById('commentContent').value.trim();
+            if (!content) {
+                alert('Vui lòng nhập nội dung bình luận');
+                return;
+            }
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+            fetch('/Comment/Add', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': token
+                },
+                body: 'postId=' + postId + '&content=' + encodeURIComponent(content)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('commentContent').value = '';
+                    loadComments(postId);
+                    // Update total comments count
+                    const totalSpan = document.getElementById('totalComments');
+                    if (totalSpan) {
+                        const currentCount = parseInt(totalSpan.textContent) || 0;
+                        totalSpan.textContent = (currentCount + 1) + ' bình luận';
+                    }
+                } else {
+                    alert(data.message || 'Không thể gửi bình luận. Vui lòng thử lại.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra: ' + error.message);
+            });
+        }
+
+        // Show/hide reply form
+        function showReplyForm(commentId) {
+            if (activeReplyCommentId === commentId) {
+                const replyForm = document.getElementById(`reply-form-${commentId}`);
+                if (replyForm) replyForm.style.display = 'none';
+                activeReplyCommentId = null;
+            } else {
+                if (activeReplyCommentId) {
+                    const oldForm = document.getElementById(`reply-form-${activeReplyCommentId}`);
+                    if (oldForm) oldForm.style.display = 'none';
+                }
+                const replyForm = document.getElementById(`reply-form-${commentId}`);
+                if (replyForm) {
+                    replyForm.style.display = 'block';
+                    replyForm.querySelector('.reply-input')?.focus();
+                }
+                activeReplyCommentId = commentId;
+            }
+        }
+
+        // Submit reply
+        async function submitReply(commentId) {
+            const input = document.getElementById(`reply-input-${commentId}`);
+            const content = input.value.trim();
+
+            if (!content) {
+                alert('Vui lòng nhập nội dung phản hồi');
+                return;
+            }
+
+            const submitBtn = document.querySelector(`#reply-form-${commentId} .reply-submit`);
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Đang gửi...';
+
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+                const response = await fetch('/CommentReply/Create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': token || ''
+                    },
+                    body: `commentId=${commentId}&content=${encodeURIComponent(content)}`
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    input.value = '';
+                    await loadReplies(commentId);
+
+                    const replyCountSpan = document.querySelector(`#toggle-replies-${commentId}`);
+                    if (replyCountSpan) {
+                        const match = replyCountSpan.textContent.match(/\((\d+)\)/);
+                        const currentCount = match ? parseInt(match[1]) : 0;
+                        replyCountSpan.innerHTML = `<i class="fa-regular fa-comment-dots"></i> Xem phản hồi (${currentCount + 1})`;
+                    }
+
+                    document.getElementById(`reply-form-${commentId}`).style.display = 'none';
+                    activeReplyCommentId = null;
+                } else {
+                    alert(data.message || 'Không thể gửi phản hồi');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra, vui lòng thử lại');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+
+        // Load replies for a comment
+        async function loadReplies(commentId) {
+            const container = document.getElementById(`replies-${commentId}`);
+            if (!container) return;
+
+            try {
+                const response = await fetch(`/CommentReply/List?commentId=${commentId}`);
+                const replies = await response.json();
+
+                if (replies.length === 0) {
+                    container.innerHTML = '<div class="no-replies">Chưa có phản hồi nào</div>';
+                    return;
+                }
+
+                container.innerHTML = replies.map(reply => `
+                    <div class="reply-item" id="reply-${reply.id}">
+                        <div class="reply-avatar">
+                            ${reply.userAvatar ? `<img src="${reply.userAvatar}" alt="${escapeHtml(reply.username)}" />` : `<span>${escapeHtml(reply.username)[0].toUpperCase()}</span>`}
+                        </div>
+                        <div class="reply-content">
+                            <div class="reply-header">
+                                <span class="reply-username">${escapeHtml(reply.username)}</span>
+                                <span class="reply-time">${reply.createdAt}</span>
+                                ${reply.isEdited ? '<span class="reply-edited">(đã sửa)</span>' : ''}
+                            </div>
+                            <div class="reply-text">${escapeHtml(reply.content)}</div>
+                            ${currentUserId === reply.userId ? `
+                                <div class="reply-actions">
+                                    <button class="reply-action-btn edit-reply" onclick="editReply(${reply.id}, '${escapeHtml(reply.content).replace(/'/g, "\\'")}')">
+                                        <i class="fa-regular fa-pen-to-square"></i> Sửa
+                                    </button>
+                                    <button class="reply-action-btn delete-reply" onclick="deleteReply(${reply.id})">
+                                        <i class="fa-regular fa-trash-can"></i> Xóa
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error loading replies:', error);
+                container.innerHTML = '<div class="no-replies">Lỗi tải phản hồi</div>';
+            }
+        }
+
+        // Toggle replies visibility
+        function toggleReplies(commentId) {
+            const repliesContainer = document.getElementById(`replies-${commentId}`);
+            const toggleBtn = document.querySelector(`#toggle-replies-${commentId}`);
+
+            if (repliesContainer.style.display === 'none' || !repliesContainer.style.display) {
+                repliesContainer.style.display = 'block';
+                toggleBtn.innerHTML = '<i class="fa-regular fa-comment-dots"></i> Ẩn phản hồi';
+                if (repliesContainer.innerHTML === '') {
+                    loadReplies(commentId);
+                }
+            } else {
+                repliesContainer.style.display = 'none';
+                const replyCount = repliesContainer.querySelectorAll('.reply-item').length;
+                toggleBtn.innerHTML = `<i class="fa-regular fa-comment-dots"></i> Xem phản hồi (${replyCount})`;
+            }
+        }
+
+        // Edit reply
+        async function editReply(replyId, oldContent) {
+            const newContent = prompt('Sửa phản hồi của bạn:', oldContent);
+            if (!newContent || newContent === oldContent) return;
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+            const response = await fetch('/CommentReply/Edit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': token || ''
+                },
+                body: `replyId=${replyId}&content=${encodeURIComponent(newContent)}`
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                const replyDiv = document.getElementById(`reply-${replyId}`);
+                if (replyDiv) {
+                    const commentId = replyDiv.closest('.comment-item')?.getAttribute('data-comment-id');
+                    if (commentId) await loadReplies(parseInt(commentId));
+                }
+            } else {
+                alert(data.message || 'Không thể sửa phản hồi');
+            }
+        }
+
+        // Delete reply
+        async function deleteReply(replyId) {
+            if (!confirm('Bạn có chắc chắn muốn xóa phản hồi này?')) return;
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+            const response = await fetch('/CommentReply/Delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': token || ''
+                },
+                body: `replyId=${replyId}`
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                const replyDiv = document.getElementById(`reply-${replyId}`);
+                if (replyDiv) {
+                    const commentId = replyDiv.closest('.comment-item')?.getAttribute('data-comment-id');
+                    if (commentId) {
+                        await loadReplies(parseInt(commentId));
+                        // Update reply count
+                        const toggleBtn = document.querySelector(`#toggle-replies-${commentId}`);
+                        if (toggleBtn) {
+                            const match = toggleBtn.textContent.match(/\((\d+)\)/);
+                            const currentCount = match ? parseInt(match[1]) : 0;
+                            toggleBtn.innerHTML = `<i class="fa-regular fa-comment-dots"></i> Xem phản hồi (${Math.max(0, currentCount - 1)})`;
+                        }
+                    }
+                }
+            } else {
+                alert(data.message || 'Không thể xóa phản hồi');
+            }
+        }
+
+        // Bookmark
+        function toggleBookmark(postId, btn) {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+            fetch('/Bookmark/Toggle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': token || ''
+                },
+                body: 'postId=' + postId
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    openModal('login');
+                    return;
+                }
+                if (data.saved) {
+                    btn.classList.add('bookmarked');
+                    btn.innerHTML = '<i class="fa-regular fa-bookmark"></i> <span>Đã lưu</span>';
+                } else {
+                    btn.classList.remove('bookmarked');
+                    btn.innerHTML = '<i class="fa-regular fa-bookmark"></i> <span>Lưu bài</span>';
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        // Escape HTML
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // Adoption Request Modal
+        function openAdoptModal() {
+            document.getElementById('adoptModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            document.getElementById('adoptForm').reset();
+            document.getElementById('adoptAlert').className = 'alert-message';
+            document.getElementById('adoptAlert').style.display = 'none';
+        }
+
+        function closeAdoptModal() {
+            document.getElementById('adoptModal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        async function submitAdoptRequest() {
+            const form = document.getElementById('adoptForm');
+            const formData = new FormData(form);
+            const postId = formData.get('postId');
+            const message = formData.get('message')?.trim();
+            const phoneNumber = formData.get('phoneNumber')?.trim();
+            const address = formData.get('address')?.trim();
+
+            if (!message) { showAdoptAlert('Vui lòng nhập lời nhắn', 'error'); return; }
+            if (!phoneNumber) { showAdoptAlert('Vui lòng nhập số điện thoại', 'error'); return; }
+            if (!address) { showAdoptAlert('Vui lòng nhập địa chỉ', 'error'); return; }
+
+            const submitBtn = document.querySelector('.btn-submit-adopt');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Đang gửi...';
+
+            try {
+                const token = document.querySelector('#adoptForm input[name="__RequestVerificationToken"]')?.value;
+
+                const response = await fetch(`/Adoption/Request?postId=${postId}`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'RequestVerificationToken': token }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showAdoptAlert(data.message, 'success');
+                    setTimeout(() => { closeAdoptModal(); window.location.reload(); }, 2000);
+                } else {
+                    showAdoptAlert(data.message, 'error');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showAdoptAlert('Có lỗi xảy ra, vui lòng thử lại.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+
+        function showAdoptAlert(message, type) {
+            const alertDiv = document.getElementById('adoptAlert');
+            alertDiv.textContent = message;
+            alertDiv.className = `alert-message ${type}`;
+            alertDiv.style.display = 'block';
+            setTimeout(() => { alertDiv.style.display = 'none'; }, 3000);
+        }
+
+        // Report Functions - sử dụng modal có sẵn
+        function openPostReport(postId) {
+            if (typeof window.openPostReport === 'function') {
+                window.openPostReport(postId);
+            } else {
+                console.error('openPostReport function not found');
+                alert('Chức năng báo cáo tạm thời không khả dụng');
+            }
+        }
+
+        function openCommentReport(commentId) {
+            if (typeof window.openCommentReport === 'function') {
+                window.openCommentReport(commentId);
+            } else {
+                console.error('openCommentReport function not found');
+                alert('Chức năng báo cáo tạm thời không khả dụng');
+            }
+        }
+
+        // Edit Post Functions
+        let currentEditPostId = null;
+        let existingImagesToDelete = [];
+        let newImageFiles = [];
+
+        function openEditModal(postId) {
+            currentEditPostId = postId;
+            resetEditForm();
+            fetch('/UserPost/GetEditData?id=' + postId)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('editPostId').value = data.id;
+                        document.getElementById('editTitle').value = data.title;
+                        document.getElementById('editContent').value = data.content;
+                        document.getElementById('editType').value = data.type;
+                        document.querySelectorAll('.type-option-edit').forEach(opt => {
+                            if (opt.getAttribute('data-value') === data.type) selectEditType(opt);
+                        });
+                        const container = document.getElementById('existingImages');
+                        container.innerHTML = '';
+                        if (data.images && data.images.length > 0) {
+                            data.images.forEach(img => {
+                                const div = document.createElement('div');
+                                div.className = 'existing-img-item';
+                                div.innerHTML = `<img src="${img.path}" alt="Image" /><button type="button" class="remove-existing-img" onclick="markImageForDeletion(${img.id}, this)">✕</button>`;
+                                container.appendChild(div);
+                            });
+                        } else {
+                            container.innerHTML = '<p style="color: var(--text-muted);">Không có ảnh nào</p>';
+                        }
+                        document.getElementById('editModal').classList.add('active');
+                        document.body.style.overflow = 'hidden';
+                    } else {
+                        alert(data.message || 'Không thể tải dữ liệu bài viết');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+            document.body.style.overflow = '';
+            resetEditForm();
+        }
+
+        function resetEditForm() {
+            existingImagesToDelete = [];
+            newImageFiles = [];
+            document.getElementById('editMessage').className = 'edit-message';
+            document.getElementById('editMessage').style.display = 'none';
+            document.getElementById('newImagesPreview').innerHTML = '';
+            const fileInput = document.getElementById('editImages');
+            if (fileInput) fileInput.value = '';
+        }
+
+        function selectEditType(btn) {
+            document.querySelectorAll('.type-option-edit').forEach(opt => opt.classList.remove('selected'));
+            btn.classList.add('selected');
+            document.getElementById('editType').value = btn.getAttribute('data-value');
+        }
+
+        function markImageForDeletion(imageId, btn) {
+            existingImagesToDelete.push(imageId);
+            btn.closest('.existing-img-item').remove();
+        }
+
+        document.getElementById('editImages')?.addEventListener('change', function(e) {
+            newImageFiles = Array.from(e.target.files);
+            renderNewImagePreviews();
+        });
+
+        function renderNewImagePreviews() {
+            const grid = document.getElementById('newImagesPreview');
+            grid.innerHTML = '';
+            newImageFiles.forEach((file, idx) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const div = document.createElement('div');
+                    div.className = 'img-preview-item';
+                    div.innerHTML = `<img src="${e.target.result}" alt="Preview" /><button type="button" class="remove-img" onclick="removeNewImage(${idx})">✕</button>`;
+                    grid.appendChild(div);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function removeNewImage(idx) {
+            newImageFiles.splice(idx, 1);
+            renderNewImagePreviews();
+        }
+
+        function submitEdit() {
+            const title = document.getElementById('editTitle').value.trim();
+            const content = document.getElementById('editContent').value.trim();
+            const type = document.getElementById('editType').value;
+            if (!title) { showEditMessage('Vui lòng nhập tiêu đề', 'error'); return; }
+            if (!content) { showEditMessage('Vui lòng nhập nội dung', 'error'); return; }
+            const formData = new FormData();
+            formData.append('id', currentEditPostId);
+            formData.append('title', title);
+            formData.append('content', content);
+            formData.append('type', type);
+            existingImagesToDelete.forEach(id => formData.append('deleteImageIds', id));
+            newImageFiles.forEach(file => formData.append('images', file));
+            const token = document.querySelector('#editForm input[name="__RequestVerificationToken"]');
+            if (token) formData.append('__RequestVerificationToken', token.value);
+            const saveBtn = document.querySelector('.edit-save-btn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Đang lưu...';
+            fetch('/UserPost/Edit', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showEditMessage(data.message || 'Cập nhật thành công!', 'success');
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    showEditMessage(data.message || 'Cập nhật thất bại', 'error');
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Lưu thay đổi';
+                }
+            })
+            .catch(() => {
+                showEditMessage('Có lỗi xảy ra, vui lòng thử lại', 'error');
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Lưu thay đổi';
+            });
+        }
+
+        function showEditMessage(message, type) {
+            const msgDiv = document.getElementById('editMessage');
+            msgDiv.textContent = message;
+            msgDiv.className = `edit-message ${type}`;
+            msgDiv.style.display = 'block';
+            setTimeout(() => msgDiv.style.display = 'none', 3000);
+        }
+
+        // Delete Post Functions
+        let postIdToDelete = null;
+        function confirmDelete(postId) { postIdToDelete = postId; document.getElementById('deleteModal').classList.add('active'); }
+        function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('active'); postIdToDelete = null; }
+        function deletePost() {
+            if (!postIdToDelete) return;
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+            fetch('/UserPost/Delete/' + postIdToDelete, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': token || ''
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) window.location.href = '/';
+                else alert('Không thể xóa bài viết: ' + data.message);
+            })
+            .catch(error => console.error('Error:', error))
+            .finally(() => closeDeleteModal());
+        }
+
+        // Close modals on outside click
+        document.getElementById('adoptModal')?.addEventListener('click', function(e) { if (e.target === this) closeAdoptModal(); });
+        document.getElementById('editModal')?.addEventListener('click', function(e) { if (e.target === this) closeEditModal(); });
+        document.getElementById('deleteModal')?.addEventListener('click', function(e) { if (e.target === this) closeDeleteModal(); });
+
+        // Set active thumbnail on load
+        if (document.querySelector('.gallery-thumb')) {
+            document.querySelectorAll('.gallery-thumb').forEach((thumb, index) => { if (index === 0) thumb.classList.add('active'); });
+        }
+    </script>
+}

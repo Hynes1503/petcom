@@ -1,0 +1,352 @@
+﻿@model petcomm.Models.Post
+@{
+    ViewData["Title"] = "Sửa bài đăng";
+    Layout = "_AdminLayout";
+    ViewData["ActiveMenu"] = "posts";
+}
+
+<style>
+    .form-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+        max-width: 740px;
+    }
+
+    .form-card-header {
+        padding: 22px 28px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface-2);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .form-card-header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .form-card-icon {
+        width: 38px;
+        height: 38px;
+        background: var(--accent-light);
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+    }
+
+    .form-card-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .form-card-subtitle {
+        font-size: 12.5px;
+        color: var(--text-muted);
+        margin-top: 2px;
+    }
+
+    .post-id-tag {
+        font-family: monospace;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        padding: 4px 12px;
+        border-radius: 5px;
+        font-size: 12.5px;
+        color: var(--text-muted);
+    }
+
+    .form-body {
+        padding: 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+    }
+
+    textarea.form-control {
+        resize: vertical;
+        min-height: 130px;
+    }
+
+    .image-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 12px;
+        margin-top: 4px;
+    }
+
+    .image-item {
+        position: relative;
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        border: 1px solid var(--border);
+        background: var(--surface-2);
+    }
+
+        .image-item img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            display: block;
+        }
+
+    .image-delete-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(192,57,43,0);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s;
+    }
+
+    .image-item:has(.delete-check:checked) .image-delete-overlay {
+        background: rgba(192,57,43,0.55);
+    }
+
+    .delete-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        padding: 6px 10px;
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+        .delete-label:hover {
+            background: var(--red-bg);
+            color: var(--red);
+        }
+
+        .delete-label input {
+            cursor: pointer;
+            accent-color: var(--red);
+        }
+
+        .delete-label.checked-label {
+            background: var(--red-bg);
+            color: var(--red);
+        }
+
+    .file-upload-area {
+        border: 2px dashed var(--border);
+        border-radius: var(--radius-sm);
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.15s;
+        background: var(--surface-2);
+        position: relative;
+    }
+
+        .file-upload-area:hover {
+            border-color: var(--accent);
+            background: var(--accent-light);
+        }
+
+        .file-upload-area input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+    .upload-text {
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+    }
+
+    .upload-hint {
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+
+    .form-footer {
+        padding: 20px 28px;
+        border-top: 1px solid var(--border);
+        background: var(--surface-2);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .section-divider {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 4px 0;
+    }
+
+    .section-divider-line {
+        flex: 1;
+        border: none;
+        border-top: 1px solid var(--border);
+    }
+
+    .section-divider-text {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
+    }
+
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-bottom: 22px;
+    }
+
+        .breadcrumb a {
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+
+            .breadcrumb a:hover {
+                color: var(--accent);
+            }
+
+        .breadcrumb .sep {
+            opacity: 0.4;
+        }
+
+        .breadcrumb .current {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+</style>
+
+<div class="breadcrumb">
+    <a href="/AdminPost">Bài đăng</a>
+    <span class="sep">›</span>
+    <span class="current">Chỉnh sửa #@Model.Id</span>
+</div>
+
+<h1 class="page-title" style="margin-bottom:24px;">Chỉnh sửa bài đăng</h1>
+
+<div class="form-card">
+    <div class="form-card-header">
+        <div class="form-card-header-left">
+            <div class="form-card-icon">✏️</div>
+            <div>
+                <div class="form-card-title">Thông tin bài đăng</div>
+                <div class="form-card-subtitle">Cập nhật nội dung và trạng thái bài đăng</div>
+            </div>
+        </div>
+        <span class="post-id-tag">ID #@Model.Id</span>
+    </div>
+
+    <form asp-action="Edit" method="post" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="CreatedAt" />
+        <input type="hidden" asp-for="UserId" />
+
+        <div class="form-body">
+            <div class="form-group">
+                <label class="form-label">Tiêu đề bài đăng <span style="color:var(--accent)">*</span></label>
+                <input asp-for="Title" class="form-control" placeholder="Nhập tiêu đề..." />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Nội dung <span style="color:var(--accent)">*</span></label>
+                <textarea asp-for="Content" class="form-control" placeholder="Mô tả chi tiết..."></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Loại bài đăng</label>
+                    <select asp-for="Type" class="form-control">
+                        <option value="Chia sẻ">🤝 Chia sẻ / Cộng đồng</option>
+                        <option value="Adoption">🏠 Tìm nuôi (Adoption)</option>
+                        <option value="Thất lạc">🔍 Thất lạc / Tìm chủ</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Trạng thái</label>
+                    <select asp-for="Status" class="form-control">
+                        <option value="Active">✅ Active — Đang hiển thị</option>
+                        <option value="Closed">🔒 Closed — Đã đóng</option>
+                    </select>
+                </div>
+            </div>
+
+            @if (Model.Images != null && Model.Images.Any())
+            {
+                <div class="form-group">
+                    <div class="section-divider">
+                        <hr class="section-divider-line" />
+                        <span class="section-divider-text">Ảnh hiện tại</span>
+                        <hr class="section-divider-line" />
+                    </div>
+                    <p style="font-size:12.5px; color:var(--text-muted); margin-bottom:10px;">Tích vào ảnh để xóa khi cập nhật</p>
+                    <div class="image-grid">
+                        @foreach (var img in Model.Images)
+                        {
+                            <div class="image-item">
+                                <img src="@img.ImagePath" alt="Ảnh bài đăng" />
+                                <label class="delete-label">
+                                    <input type="checkbox" name="deleteImageIds" value="@img.Id" class="delete-check" />
+                                    Xóa ảnh
+                                </label>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div class="form-group">
+                <div class="section-divider">
+                    <hr class="section-divider-line" />
+                    <span class="section-divider-text">Thêm ảnh mới</span>
+                    <hr class="section-divider-line" />
+                </div>
+                <div class="file-upload-area">
+                    <input type="file" name="images" multiple accept="image/*" />
+                    <div style="font-size:24px; margin-bottom:6px;">📎</div>
+                    <div class="upload-text">Chọn ảnh mới để thêm vào bài đăng</div>
+                    <div class="upload-hint">PNG, JPG, WEBP — có thể chọn nhiều ảnh</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <button type="submit" class="btn btn-primary">✅ Cập nhật</button>
+            <a asp-action="Index" class="btn btn-ghost">Hủy</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Highlight image items that are checked for deletion
+    document.querySelectorAll('.delete-check').forEach(cb => {
+        cb.addEventListener('change', function () {
+            this.closest('.image-item').style.opacity = this.checked ? '0.6' : '1';
+            this.closest('.delete-label').classList.toggle('checked-label', this.checked);
+        });
+    });
+</script>

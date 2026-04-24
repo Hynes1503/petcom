@@ -1,0 +1,483 @@
+@model List<petcomm.Models.PostReport>
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Kiểm duyệt báo cáo";
+    ViewData["ActiveMenu"] = "reports";
+    int currentPage = ViewBag.CurrentPage;
+    int totalPages = ViewBag.TotalPages;
+    string currentStatus = ViewBag.Status;
+}
+
+<div class="admin-page-header">
+    <div>
+        <h1 class="page-title">Báo cáo vi phạm</h1>
+        <span class="page-subtitle">Kiểm duyệt các bài đăng bị người dùng báo cáo</span>
+    </div>
+</div>
+
+<!-- Status Tabs -->
+<div class="report-tabs">
+    <a href="/admin/reports?status=Pending"
+       class="report-tab @(currentStatus == "Pending" ? "active" : "")">
+        <span class="tab-dot pending"></span>
+        Chờ xử lý
+        @if ((int)ViewBag.PendingCount > 0)
+        {
+            <span class="tab-badge">@ViewBag.PendingCount</span>
+        }
+    </a>
+    <a href="/admin/reports?status=Resolved"
+       class="report-tab @(currentStatus == "Resolved" ? "active" : "")">
+        <span class="tab-dot resolved"></span>
+        Đã xử lý
+        <span class="tab-count">@ViewBag.ResolvedCount</span>
+    </a>
+    <a href="/admin/reports?status=Dismissed"
+       class="report-tab @(currentStatus == "Dismissed" ? "active" : "")">
+        <span class="tab-dot dismissed"></span>
+        Bỏ qua
+        <span class="tab-count">@ViewBag.DismissedCount</span>
+    </a>
+</div>
+
+<!-- Reports List -->
+@if (!Model.Any())
+{
+    <div class="table-card">
+        <div class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+            <p>@(currentStatus == "Pending" ? "Không có báo cáo nào đang chờ xử lý 🎉" : "Không có báo cáo nào")</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="reports-list">
+        @foreach (var report in Model)
+        {
+            <div class="report-card" id="report-@report.Id">
+                <!-- Report Header -->
+                <div class="report-header">
+                    <div class="report-meta">
+                        <span class="reason-badge reason-@report.Reason?.ToLower().Replace(" ", "-")">
+                            @GetReasonIcon(report.Reason) @report.Reason
+                        </span>
+                        <span class="report-time">@report.CreatedAt.ToString("HH:mm dd/MM/yyyy")</span>
+                        @if (report.Status != "Pending")
+                        {
+                            <span class="status-badge status-@report.Status?.ToLower()">
+                                @(report.Status == "Resolved" ? "✓ Đã xử lý" : "✕ Bỏ qua")
+                            </span>
+                        }
+                    </div>
+                    <span class="report-id">#@report.Id</span>
+                </div>
+
+                <div class="report-body">
+                    <!-- POST INFO -->
+                    <div class="report-post-info">
+                        <div class="report-section-label">Bài bị báo cáo</div>
+                        <div class="reported-post">
+                            @{
+                                var thumb = report.Post?.Images?.FirstOrDefault()?.ImagePath;
+                            }
+                            @if (!string.IsNullOrEmpty(thumb))
+                            {
+                                <img src="/@thumb.TrimStart('/')" class="post-mini-thumb" alt="" />
+                            }
+                            <div class="post-mini-info">
+                                <div class="post-mini-title">@report.Post?.Title</div>
+                                <div class="post-mini-meta">
+                                    <span>bởi <strong>@report.Post?.User?.Username</strong></span>
+                                    <span class="dot">·</span>
+                                    <span class="type-badge">@report.Post?.Type</span>
+                                    <span class="dot">·</span>
+                                    <span class="post-status-inline status-@report.Post?.Status?.ToLower()">@report.Post?.Status</span>
+                                </div>
+                                <a href="/admin/posts/@report.PostId" target="_blank" class="view-post-link">
+                                    Xem bài đăng →
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- REPORTER INFO -->
+                    <div class="report-reporter-info">
+                        <div class="report-section-label">Người báo cáo</div>
+                        <div class="reporter-cell">
+                            @if (!string.IsNullOrEmpty(report.Reporter?.AvatarPath))
+                            {
+                                <img src="@report.Reporter.AvatarPath" class="mini-avatar" alt="" />
+                            }
+                            else
+                            {
+                                <div class="mini-avatar-placeholder">@(report.Reporter?.Username?.Substring(0, 1).ToUpper())</div>
+                            }
+                            <div>
+                                <div class="fw-600">@report.Reporter?.Username</div>
+                                <div class="text-muted small">@report.Reporter?.Email</div>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(report.Description))
+                        {
+                            <div class="report-description">
+                                <div class="report-section-label" style="margin-top:12px;">Mô tả thêm</div>
+                                <div class="description-text">"@report.Description"</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- ADMIN RESOLVED INFO -->
+                @if (report.Status != "Pending" && report.ReviewedByAdmin != null)
+                {
+                    <div class="admin-review-info">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        Xử lý bởi <strong>@report.ReviewedByAdmin.Username</strong>
+                        lúc @report.ReviewedAt?.ToString("HH:mm dd/MM/yyyy")
+                        @if (!string.IsNullOrEmpty(report.AdminNote))
+                        {
+                            <span> · Ghi chú: <em>@report.AdminNote</em></span>
+                        }
+                    </div>
+                }
+
+                <!-- ACTIONS (chỉ hiện khi Pending) -->
+                @if (report.Status == "Pending")
+                {
+                    <div class="report-actions">
+                        <button class="btn-action btn-hide"
+                                onclick="openResolveModal(@report.Id, 'hide_post', '@report.Post?.Title?.Replace("'", "\\'")' )">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                            Ẩn bài
+                        </button>
+                        <button class="btn-action btn-delete"
+                                onclick="openResolveModal(@report.Id, 'delete_post', '@report.Post?.Title?.Replace("'", "\\'")' )">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a1,1,0,0,1,1-1h4a1,1,0,0,1,1,1v2"/></svg>
+                            Xoá bài
+                        </button>
+                        <button class="btn-action btn-dismiss"
+                                onclick="quickDismiss(@report.Id)">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            Bỏ qua
+                        </button>
+                    </div>
+                }
+                @if (report.Status == "Resolved" && report.Post?.Status == "Hidden")
+                {
+                    <div class="report-actions">
+                        <button class="btn-action btn-restore" onclick="restorePost(@report.Id)">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 .49-3.44"/></svg>
+                            Khôi phục bài
+                        </button>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+<!-- Pagination -->
+@if (totalPages > 1)
+{
+    <div class="pagination">
+        @if (currentPage > 1)
+        {
+            <a href="?status=@currentStatus&page=@(currentPage - 1)" class="page-btn">← Trước</a>
+        }
+        @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+        {
+            <a href="?status=@currentStatus&page=@i" class="page-btn @(i == currentPage ? "active" : "")">@i</a>
+        }
+        @if (currentPage < totalPages)
+        {
+            <a href="?status=@currentStatus&page=@(currentPage + 1)" class="page-btn">Tiếp →</a>
+        }
+    </div>
+}
+
+<!-- Resolve Modal -->
+<div id="resolveModal" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+        <h3 class="modal-title" id="modalTitle">Xác nhận xử lý</h3>
+        <p class="modal-msg" id="modalMsg"></p>
+        <div class="modal-field">
+            <label class="modal-label">Ghi chú (tuỳ chọn)</label>
+            <textarea id="adminNote" class="modal-textarea" placeholder="Lý do xử lý, ghi chú cho hồ sơ..."></textarea>
+        </div>
+        <div class="modal-actions">
+            <button onclick="closeResolveModal()" class="btn-cancel">Huỷ</button>
+            <button onclick="executeResolve()" id="modalConfirmBtn" class="btn-confirm-delete">Xác nhận</button>
+        </div>
+    </div>
+</div>
+
+@functions {
+    string GetReasonIcon(string? reason) => reason switch {
+        "Spam" => "🚫",
+        "Lừa đảo" => "⚠️",
+        "Nội dung không phù hợp" => "🔞",
+        "Thông tin sai" => "❌",
+        _ => "📋"
+    };
+}
+
+<style>
+    .report-tabs {
+        display: flex; gap: 4px;
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 6px;
+        margin-bottom: 20px;
+    }
+    .report-tab {
+        display: flex; align-items: center; gap: 8px;
+        padding: 9px 18px; border-radius: 7px;
+        font-size: 14px; font-weight: 500;
+        color: var(--text-muted); text-decoration: none;
+        transition: all 0.15s; flex: 1; justify-content: center;
+    }
+    .report-tab:hover { background: var(--surface2); color: var(--text); }
+    .report-tab.active { background: var(--surface2); color: var(--text); font-weight: 600; }
+    .tab-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .tab-dot.pending { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+    .tab-dot.resolved { background: var(--green); }
+    .tab-dot.dismissed { background: var(--text-muted); }
+    .tab-badge {
+        background: var(--yellow); color: #000;
+        font-size: 11px; font-weight: 700;
+        padding: 1px 7px; border-radius: 20px; min-width: 20px; text-align: center;
+    }
+    .tab-count { font-size: 12px; color: var(--text-muted); }
+
+    .reports-list { display: flex; flex-direction: column; gap: 16px; }
+
+    .report-card {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); overflow: hidden;
+        transition: border-color 0.2s;
+    }
+    .report-card:hover { border-color: var(--border-light); }
+
+    .report-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface2);
+    }
+    .report-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .report-time { font-size: 12px; color: var(--text-muted); }
+    .report-id { font-size: 12px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+
+    .reason-badge {
+        font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 20px;
+        background: var(--yellow-dim); color: var(--yellow);
+    }
+
+    .report-body {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+    }
+    .report-post-info {
+        padding: 18px 20px;
+        border-right: 1px solid var(--border);
+    }
+    .report-reporter-info { padding: 18px 20px; }
+    .report-section-label {
+        font-size: 10px; font-weight: 700; letter-spacing: 1px;
+        text-transform: uppercase; color: var(--text-muted);
+        margin-bottom: 10px;
+    }
+
+    .reported-post { display: flex; gap: 12px; align-items: flex-start; }
+    .post-mini-thumb {
+        width: 64px; height: 52px; border-radius: 8px;
+        object-fit: cover; flex-shrink: 0;
+    }
+    .post-mini-title { font-size: 14px; font-weight: 600; margin-bottom: 5px; line-height: 1.3; }
+    .post-mini-meta {
+        display: flex; align-items: center; gap: 6px;
+        font-size: 12px; color: var(--text-muted); flex-wrap: wrap;
+    }
+    .dot { color: var(--border-light); }
+    .post-status-inline { font-size: 11px; font-weight: 600; }
+    .post-status-inline.status-active { color: var(--green); }
+    .post-status-inline.status-hidden { color: var(--red); }
+    .post-status-inline.status-pending { color: var(--yellow); }
+    .view-post-link {
+        display: inline-block; margin-top: 6px;
+        font-size: 12px; color: var(--primary); text-decoration: none; font-weight: 500;
+    }
+    .view-post-link:hover { text-decoration: underline; }
+
+    .reporter-cell { display: flex; gap: 10px; align-items: center; }
+    .description-text {
+        font-size: 13px; color: var(--text-muted);
+        font-style: italic; line-height: 1.5;
+        background: var(--surface2); padding: 8px 12px;
+        border-radius: 8px; border-left: 3px solid var(--border-light);
+    }
+
+    .admin-review-info {
+        display: flex; align-items: center; gap: 8px;
+        padding: 10px 20px;
+        border-top: 1px solid var(--border);
+        background: var(--surface2);
+        font-size: 12px; color: var(--text-muted);
+    }
+
+    .report-actions {
+        display: flex; gap: 10px; padding: 14px 20px;
+        border-top: 1px solid var(--border);
+        background: rgba(0,0,0,0.1);
+    }
+    .btn-action {
+        display: inline-flex; align-items: center; gap: 7px;
+        padding: 8px 16px; border-radius: 8px;
+        font-size: 13px; font-weight: 600;
+        cursor: pointer; border: 1px solid;
+        font-family: 'DM Sans', sans-serif;
+        transition: all 0.15s;
+    }
+    .btn-action svg { width: 14px; height: 14px; }
+    .btn-hide {
+        background: var(--yellow-dim); border-color: var(--yellow);
+        color: var(--yellow);
+    }
+    .btn-hide:hover { background: rgba(245,166,35,0.25); }
+    .btn-delete {
+        background: var(--red-dim); border-color: var(--red);
+        color: var(--red);
+    }
+    .btn-delete:hover { background: rgba(248,112,112,0.25); }
+    .btn-dismiss {
+        background: var(--surface2); border-color: var(--border);
+        color: var(--text-muted);
+    }
+    .btn-dismiss:hover { background: var(--border); color: var(--text); }
+    .btn-restore {
+        background: var(--green-dim); border-color: var(--green);
+        color: var(--green);
+    }
+    .btn-restore:hover { background: rgba(62,207,142,0.25); }
+
+    /* Modal extra */
+    .modal-field { margin-top: 16px; }
+    .modal-label {
+        display: block; font-size: 12px; font-weight: 600;
+        color: var(--text-muted); margin-bottom: 6px;
+        text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .modal-textarea {
+        width: 100%; padding: 10px 12px;
+        background: var(--surface2); border: 1px solid var(--border);
+        border-radius: 8px; color: var(--text);
+        font-family: 'DM Sans', sans-serif; font-size: 13px;
+        resize: vertical; min-height: 70px; outline: none;
+    }
+    .modal-textarea:focus { border-color: var(--primary); }
+</style>
+
+@section Scripts {
+<script>
+    const TOKEN = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+    let resolveReportId = null;
+    let resolveAction = null;
+
+    function openResolveModal(reportId, action, postTitle) {
+        resolveReportId = reportId;
+        resolveAction = action;
+        document.getElementById('adminNote').value = '';
+
+        const titles = {
+            'hide_post': '🙈 Ẩn bài đăng',
+            'delete_post': '🗑️ Xoá bài đăng'
+        };
+        const msgs = {
+            'hide_post': `Bài "<strong>${postTitle}</strong>" sẽ bị ẩn khỏi trang chủ. Bạn có thể khôi phục sau.`,
+            'delete_post': `Bài "<strong>${postTitle}</strong>" sẽ bị xoá vĩnh viễn cùng toàn bộ hình ảnh. Không thể hoàn tác.`
+        };
+        const confirmLabels = {
+            'hide_post': 'Ẩn bài',
+            'delete_post': 'Xoá vĩnh viễn'
+        };
+
+        document.getElementById('modalTitle').textContent = titles[action];
+        document.getElementById('modalMsg').innerHTML = msgs[action];
+        document.getElementById('modalConfirmBtn').textContent = confirmLabels[action];
+        document.getElementById('modalConfirmBtn').style.background =
+            action === 'delete_post' ? 'var(--red)' : 'var(--yellow)';
+        document.getElementById('resolveModal').style.display = 'flex';
+    }
+
+    function closeResolveModal() {
+        document.getElementById('resolveModal').style.display = 'none';
+        resolveReportId = null; resolveAction = null;
+    }
+
+    async function executeResolve() {
+        if (!resolveReportId || !resolveAction) return;
+        const note = document.getElementById('adminNote').value;
+        const fd = new FormData();
+        fd.append('action', resolveAction);
+        fd.append('adminNote', note);
+
+        const res = await fetch(`/admin/reports/${resolveReportId}/resolve`, {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': TOKEN },
+            body: fd
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById(`report-${resolveReportId}`)?.remove();
+            showToast(data.message, 'success');
+            updatePendingBadge(-1);
+        } else showToast(data.message, 'error');
+        closeResolveModal();
+    }
+
+    async function quickDismiss(reportId) {
+        const fd = new FormData();
+        fd.append('action', 'dismiss');
+        fd.append('adminNote', '');
+        const res = await fetch(`/admin/reports/${reportId}/resolve`, {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': TOKEN },
+            body: fd
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById(`report-${reportId}`)?.remove();
+            showToast('Đã bỏ qua báo cáo.', 'success');
+            updatePendingBadge(-1);
+        } else showToast(data.message, 'error');
+    }
+
+    async function restorePost(reportId) {
+        const res = await fetch(`/admin/reports/${reportId}/restore-post`, {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': TOKEN }
+        });
+        const data = await res.json();
+        showToast(data.message, data.success ? 'success' : 'error');
+        if (data.success) setTimeout(() => location.reload(), 800);
+    }
+
+    function updatePendingBadge(delta) {
+        const badge = document.querySelector('.tab-badge');
+        if (badge) {
+            const val = parseInt(badge.textContent) + delta;
+            if (val <= 0) badge.remove();
+            else badge.textContent = val;
+        }
+    }
+
+    function showToast(msg, type) {
+        const t = document.createElement('div');
+        t.className = `toast toast-${type}`;
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.classList.add('show'), 10);
+        setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3000);
+    }
+</script>
+}

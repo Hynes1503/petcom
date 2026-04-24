@@ -1,0 +1,372 @@
+@model List<User>
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Quản lý người dùng";
+    ViewData["ActiveMenu"] = "users";
+    int currentPage = ViewBag.CurrentPage;
+    int totalPages = ViewBag.TotalPages;
+    int totalCount = ViewBag.TotalCount;
+}
+
+<!-- Anti-forgery token meta tag cho AJAX requests -->
+<meta name="__RequestVerificationToken" content="@Html.AntiForgeryToken().ToString()" />
+
+<div class="admin-page-header">
+    <div>
+        <h1 class="page-title">Người dùng</h1>
+        <span class="page-subtitle">@totalCount tài khoản trong hệ thống</span>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+    <form method="get" class="filter-form" id="filterForm">
+        @Html.AntiForgeryToken()
+        <div class="search-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+            <input type="text" name="search" value="@ViewBag.Search" placeholder="Tìm username, email, họ tên..." class="search-input" />
+        </div>
+        <select name="role" class="filter-select">
+            <option value="">Tất cả vai trò</option>
+            <option value="Member" selected="@(ViewBag.Role == "Member")">Member</option>
+            <option value="Admin" selected="@(ViewBag.Role == "Admin")">Admin</option>
+            <option value="Moderator" selected="@(ViewBag.Role == "Moderator")">Moderator</option>
+        </select>
+        <select name="status" class="filter-select">
+            <option value="">Tất cả trạng thái</option>
+            <option value="active" selected="@(ViewBag.Status == "active")">Đang hoạt động</option>
+            <option value="inactive" selected="@(ViewBag.Status == "inactive")">Bị khoá</option>
+        </select>
+        <button type="submit" class="btn-filter">Lọc</button>
+        <a href="/admin/users" class="btn-reset">Xoá lọc</a>
+    </form>
+</div>
+
+<!-- Table -->
+<div class="table-card">
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Người dùng</th>
+                <th>Email</th>
+                <th>SĐT</th>
+                <th>Vai trò</th>
+                <th>Trạng thái</th>
+                <th>Ngày tạo</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in Model)
+            {
+                <tr id="user-row-@user.Id">
+                    <td class="text-muted small">@user.Id</td>
+                    <td>
+                        <div class="user-cell">
+                            @if (!string.IsNullOrEmpty(user.AvatarPath))
+                            {
+                                <img src="@user.AvatarPath" class="mini-avatar" alt="@user.Username" />
+                            }
+                            else
+                            {
+                                <div class="mini-avatar-placeholder">@(user.Username?.Substring(0, 1).ToUpper())</div>
+                            }
+                            <div>
+                                <div class="fw-600">@user.Username</div>
+                                @if (!string.IsNullOrEmpty(user.FullName))
+                                {
+                                    <div class="text-muted small">@user.FullName</div>
+                                }
+                            </div>
+                        </div>
+                    </td>
+                    <td class="text-muted">@user.Email</td>
+                    <td class="text-muted">@(user.PhoneNumber ?? "—")</td>
+                    <td>
+                        <select class="role-select" data-user-id="@user.Id">
+                            <option value="Member" selected="@(user.Role == "Member")">Member</option>
+                            <option value="Admin" selected="@(user.Role == "Admin")">Admin</option>
+                            <option value="Moderator" selected="@(user.Role == "Moderator")">Moderator</option>
+                        </select>
+                    </td>
+                    <td>
+                        <button class="toggle-status-btn @(user.IsActive ? "active" : "inactive")"
+                                data-user-id="@user.Id"
+                                title="@(user.IsActive ? "Khoá tài khoản" : "Kích hoạt")">
+                            <span class="status-dot @(user.IsActive ? "active" : "inactive")"></span>
+                            <span class="status-text">@(user.IsActive ? "Hoạt động" : "Bị khoá")</span>
+                        </button>
+                    </td>
+                    <td class="text-muted">@user.CreatedAt.ToString("dd/MM/yy")</td>
+                    <td>
+                        <div class="action-btns">
+                            <a href="/admin/users/@user.Id" class="btn-icon" title="Xem chi tiết">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                            </a>
+                            <button class="btn-icon btn-danger" onclick="confirmDeleteUser(@user.Id, '@user.Username')" title="Xoá">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6" /><path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a1,1,0,0,1,1-1h4a1,1,0,0,1,1,1v2" /></svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (!Model.Any())
+    {
+        <div class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
+            <p>Không tìm thấy người dùng nào</p>
+        </div>
+    }
+</div>
+
+<!-- Pagination -->
+@if (totalPages > 1)
+{
+    <div class="pagination">
+        @if (currentPage > 1)
+        {
+            <a href="?page=@(currentPage - 1)&search=@ViewBag.Search&role=@ViewBag.Role&status=@ViewBag.Status" class="page-btn">← Trước</a>
+        }
+        @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+        {
+            <a href="?page=@i&search=@ViewBag.Search&role=@ViewBag.Role&status=@ViewBag.Status"
+               class="page-btn @(i == currentPage ? "active" : "")">@i</a>
+        }
+        @if (currentPage < totalPages)
+        {
+            <a href="?page=@(currentPage + 1)&search=@ViewBag.Search&role=@ViewBag.Role&status=@ViewBag.Status" class="page-btn">Tiếp →</a>
+        }
+    </div>
+}
+
+<!-- Delete Confirm Modal -->
+<div id="deleteModal" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+        <h3 class="modal-title">Xác nhận xoá</h3>
+        <p class="modal-msg">Bạn có chắc muốn xoá người dùng <strong id="deleteUsername"></strong>? Hành động này không thể hoàn tác.</p>
+        <div class="modal-actions">
+            <button onclick="closeDeleteModal()" class="btn-cancel">Huỷ</button>
+            <button onclick="executeDeleteUser()" class="btn-confirm-delete">Xoá</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <style>
+        /* Toast notification styles */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            z-index: 9999;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+            .toast.show {
+                transform: translateX(0);
+            }
+
+        .toast-success {
+            background-color: #10b981;
+        }
+
+        .toast-error {
+            background-color: #ef4444;
+        }
+    </style>
+
+    <script>
+        // Lấy CSRF token từ meta tag (cách an toàn và sạch sẽ nhất)
+        function getAntiForgeryToken() {
+            const metaToken = document.querySelector('meta[name="__RequestVerificationToken"]');
+            if (metaToken) {
+                return metaToken.getAttribute('content');
+            }
+
+            // Fallback: lấy từ input trong form
+            const inputToken = document.querySelector('input[name="__RequestVerificationToken"]');
+            if (inputToken) {
+                return inputToken.value;
+            }
+
+            console.error('Không tìm thấy CSRF token');
+            return '';
+        }
+
+        const TOKEN = getAntiForgeryToken();
+
+        // Helper function cho fetch requests
+        async function apiRequest(url, method = 'POST', data = null) {
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': TOKEN
+                }
+            };
+
+            if (data) {
+                options.body = new URLSearchParams({
+                    ...data,
+                    __RequestVerificationToken: TOKEN
+                });
+            } else {
+                options.body = new URLSearchParams({
+                    __RequestVerificationToken: TOKEN
+                });
+            }
+
+            const response = await fetch(url, options);
+            return await response.json();
+        }
+
+        // Toggle trạng thái user
+        document.querySelectorAll('.toggle-status-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const userId = btn.dataset.userId;
+
+                try {
+                    const data = await apiRequest(`/admin/users/${userId}/toggle-status`);
+
+                    if (data.success) {
+                        btn.className = `toggle-status-btn ${data.isActive ? 'active' : 'inactive'}`;
+                        btn.querySelector('.status-dot').className = `status-dot ${data.isActive ? 'active' : 'inactive'}`;
+                        btn.querySelector('.status-text').textContent = data.isActive ? 'Hoạt động' : 'Bị khoá';
+                        showToast(data.message, 'success');
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showToast('Có lỗi xảy ra khi thay đổi trạng thái', 'error');
+                }
+            });
+        });
+
+        // Đổi role
+        document.querySelectorAll('.role-select').forEach(sel => {
+            sel.addEventListener('change', async () => {
+                const userId = sel.dataset.userId;
+                const role = sel.value;
+
+                // Lưu lại giá trị cũ để rollback nếu cần
+                const oldValue = sel.querySelector('option:checked')?.value;
+
+                try {
+                    const data = await apiRequest(`/admin/users/${userId}/change-role`, 'POST', { role: role });
+
+                    if (data.success) {
+                        showToast(data.message, 'success');
+                    } else {
+                        // Rollback nếu có lỗi
+                        if (oldValue) {
+                            sel.value = oldValue;
+                        }
+                        showToast(data.message, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    // Rollback nếu có lỗi
+                    if (oldValue) {
+                        sel.value = oldValue;
+                    }
+                    showToast('Có lỗi xảy ra khi thay đổi vai trò', 'error');
+                }
+            });
+        });
+
+        // Xoá user
+        let deleteTargetId = null;
+
+        window.confirmDeleteUser = function(id, username) {
+            deleteTargetId = id;
+            document.getElementById('deleteUsername').textContent = username;
+            document.getElementById('deleteModal').style.display = 'flex';
+        };
+
+        window.closeDeleteModal = function() {
+            document.getElementById('deleteModal').style.display = 'none';
+            deleteTargetId = null;
+        };
+
+        window.executeDeleteUser = async function() {
+            if (!deleteTargetId) return;
+
+            try {
+                const data = await apiRequest(`/admin/users/${deleteTargetId}/delete`);
+
+                if (data.success) {
+                    const userRow = document.getElementById(`user-row-${deleteTargetId}`);
+                    if (userRow) {
+                        userRow.style.transition = 'opacity 0.3s ease';
+                        userRow.style.opacity = '0';
+                        setTimeout(() => userRow.remove(), 300);
+                    }
+                    showToast(data.message, 'success');
+
+                    // Cập nhật lại số lượng user nếu cần
+                    const totalCountElement = document.querySelector('.page-subtitle');
+                    if (totalCountElement) {
+                        const currentCount = parseInt(totalCountElement.textContent.match(/\d+/)?.[0] || '0');
+                        if (currentCount > 0) {
+                            totalCountElement.textContent = `${currentCount - 1} tài khoản trong hệ thống`;
+                        }
+                    }
+                } else {
+                    showToast(data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Có lỗi xảy ra khi xoá người dùng', 'error');
+            }
+
+            closeDeleteModal();
+        };
+
+        // Toast notification
+        function showToast(msg, type) {
+            // Xóa toast cũ nếu có
+            const existingToast = document.querySelector('.toast');
+            if (existingToast) {
+                existingToast.remove();
+            }
+
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+
+            // Hiển thị toast
+            setTimeout(() => toast.classList.add('show'), 10);
+
+            // Tự động ẩn sau 3 giây
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Đóng modal khi click ra ngoài
+        document.getElementById('deleteModal')?.addEventListener('click', (e) => {
+            if (e.target === document.getElementById('deleteModal')) {
+                closeDeleteModal();
+            }
+        });
+
+        // Xử lý phím ESC để đóng modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.getElementById('deleteModal').style.display === 'flex') {
+                closeDeleteModal();
+            }
+        });
+    </script>
+}

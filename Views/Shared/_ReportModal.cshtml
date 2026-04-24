@@ -1,0 +1,426 @@
+<div id="reportModal" class="rp-overlay" style="display:none" onclick="if(event.target===this)closeReportModal()">
+    <div class="rp-box">
+        <div class="rp-header">
+            <div class="rp-header-left">
+                <span class="rp-flag-icon">🚩</span>
+                <div>
+                    <div class="rp-title" id="rp-title">Báo cáo vi phạm</div>
+                    <div class="rp-subtitle" id="rp-subtitle">Chọn lý do phù hợp</div>
+                </div>
+            </div>
+            <button onclick="closeReportModal()" class="rp-close">✕</button>
+        </div>
+
+        <div class="rp-body">
+            <p class="rp-help">Báo cáo của bạn sẽ được gửi đến đội ngũ kiểm duyệt. Chúng tôi cam kết xử lý trong 24 giờ.</p>
+            <div class="rp-reasons">
+                <label class="rp-reason"><input type="radio" name="rp-reason-radio" value="Spam" /><span class="rp-reason-inner"><span class="rp-reason-icon">🚫</span><span class="rp-reason-text"><strong>Spam</strong><small>Quảng cáo, nội dung lặp lại không liên quan</small></span></span></label>
+                <label class="rp-reason"><input type="radio" name="rp-reason-radio" value="Nội dung không phù hợp" /><span class="rp-reason-inner"><span class="rp-reason-icon">🔞</span><span class="rp-reason-text"><strong>Nội dung không phù hợp</strong><small>Hình ảnh/nội dung phản cảm, bạo lực</small></span></span></label>
+                <label class="rp-reason"><input type="radio" name="rp-reason-radio" value="Lừa đảo" /><span class="rp-reason-inner"><span class="rp-reason-icon">⚠️</span><span class="rp-reason-text"><strong>Lừa đảo</strong><small>Gian lận, chiếm đoạt tiền hoặc tài sản</small></span></span></label>
+                <label class="rp-reason"><input type="radio" name="rp-reason-radio" value="Thông tin sai" /><span class="rp-reason-inner"><span class="rp-reason-icon">❌</span><span class="rp-reason-text"><strong>Thông tin sai lệch</strong><small>Nội dung không chính xác, gây hiểu nhầm</small></span></span></label>
+                <label class="rp-reason"><input type="radio" name="rp-reason-radio" value="Ngôn ngữ thù địch" /><span class="rp-reason-inner"><span class="rp-reason-icon">💢</span><span class="rp-reason-text"><strong>Ngôn ngữ thù địch / Quấy rối</strong><small>Xúc phạm, đe doạ, bắt nạt người khác</small></span></span></label>
+                <label class="rp-reason"><input type="radio" name="rp-reason-radio" value="Khác" /><span class="rp-reason-inner"><span class="rp-reason-icon">📋</span><span class="rp-reason-text"><strong>Khác</strong><small>Lý do không có trong danh sách trên</small></span></span></label>
+            </div>
+            <div class="rp-desc-wrap">
+                <label class="rp-desc-label">Mô tả thêm <span class="rp-optional">(tuỳ chọn)</span></label>
+                <textarea id="rp-description" class="rp-desc-input" placeholder="Cung cấp thêm chi tiết để chúng tôi xử lý chính xác hơn..." rows="3"></textarea>
+            </div>
+        </div>
+
+        <div class="rp-footer">
+            <button onclick="closeReportModal()" class="rp-btn-cancel">Huỷ</button>
+            <button onclick="submitReport()" id="rp-submit-btn" class="rp-btn-submit">🚩 Gửi báo cáo</button>
+        </div>
+    </div>
+</div>
+
+<div id="rp-toast-container"></div>
+
+<style>
+    .rp-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.55);
+        backdrop-filter: blur(6px);
+        z-index: 9800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+    }
+
+    .rp-box {
+        background: #fff;
+        border-radius: 18px;
+        width: 100%;
+        max-width: 480px;
+        box-shadow: 0 24px 80px rgba(0,0,0,.25);
+        overflow: hidden;
+        animation: rpSlideUp .25s ease;
+    }
+
+    @@keyframes rpSlideUp {
+        from {
+            transform: translateY(16px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .rp-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 22px 16px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .rp-header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .rp-flag-icon {
+        font-size: 24px;
+    }
+
+    .rp-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #222;
+    }
+
+    .rp-subtitle {
+        font-size: 12px;
+        color: #999;
+        margin-top: 2px;
+    }
+
+    .rp-close {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #f5f5f5;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        color: #888;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background .15s;
+    }
+
+        .rp-close:hover {
+            background: #e8e8e8;
+        }
+
+    .rp-body {
+        padding: 18px 22px;
+    }
+
+    .rp-help {
+        font-size: 12.5px;
+        color: #999;
+        margin-bottom: 14px;
+        line-height: 1.5;
+    }
+
+    .rp-reasons {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        margin-bottom: 16px;
+    }
+
+    .rp-reason {
+        cursor: pointer;
+    }
+
+        .rp-reason input[type=radio] {
+            display: none;
+        }
+
+    .rp-reason-inner {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 11px 14px;
+        border-radius: 10px;
+        border: 2px solid #eee;
+        transition: all .15s;
+    }
+
+        .rp-reason-inner:hover {
+            border-color: #ddd;
+            background: #fafafa;
+        }
+
+    .rp-reason input:checked + .rp-reason-inner {
+        border-color: #e8892e;
+        background: #fff8f3;
+    }
+
+    .rp-reason-icon {
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+
+    .rp-reason-text {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+    }
+
+        .rp-reason-text strong {
+            font-size: 13.5px;
+            color: #222;
+        }
+
+        .rp-reason-text small {
+            font-size: 11.5px;
+            color: #999;
+        }
+
+    .rp-desc-wrap {
+        margin-top: 4px;
+    }
+
+    .rp-desc-label {
+        display: block;
+        font-size: 11.5px;
+        font-weight: 700;
+        color: #666;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+    }
+
+    .rp-optional {
+        font-weight: 400;
+        text-transform: none;
+        font-size: 11px;
+    }
+
+    .rp-desc-input {
+        width: 100%;
+        padding: 10px 13px;
+        border: 1.5px solid #e0e0e0;
+        border-radius: 10px;
+        font-family: inherit;
+        font-size: 13px;
+        color: #333;
+        resize: vertical;
+        outline: none;
+        transition: border-color .15s;
+        background: #fafafa;
+    }
+
+        .rp-desc-input:focus {
+            border-color: #e8892e;
+            background: #fff;
+        }
+
+    .rp-footer {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        padding: 14px 22px;
+        border-top: 1px solid #f0f0f0;
+        background: #fafafa;
+    }
+
+    .rp-btn-cancel {
+        padding: 9px 20px;
+        border-radius: 9px;
+        background: #f0f0f0;
+        border: 1px solid #e0e0e0;
+        color: #666;
+        font-size: 14px;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+        .rp-btn-cancel:hover {
+            background: #e8e8e8;
+        }
+
+    .rp-btn-submit {
+        padding: 9px 22px;
+        border-radius: 9px;
+        background: #e8892e;
+        border: none;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all .15s;
+    }
+
+        .rp-btn-submit:hover {
+            background: #cf7a26;
+        }
+
+        .rp-btn-submit:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+    /* Nút báo cáo bài đăng (hiển thị trong post-footer) */
+    .rp-post-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 6px 13px;
+        border-radius: 20px;
+        border: 1px solid var(--border,#e0e0e0);
+        background: transparent;
+        color: var(--text-muted,#bbb);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        font-family: inherit;
+        transition: all .15s;
+        white-space: nowrap;
+    }
+
+        .rp-post-btn:hover {
+            background: #fdecea;
+            border-color: #f87070;
+            color: #c0392b;
+        }
+    /* Nút báo cáo comment (nhỏ, trong comment-actions) */
+    .rp-cmt-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text-muted,#bbb);
+        font-size: 11px;
+        font-family: inherit;
+        padding: 2px 6px;
+        border-radius: 4px;
+        transition: all .15s;
+    }
+
+        .rp-cmt-btn:hover {
+            background: #fdecea;
+            color: #c0392b;
+        }
+    /* Toast */
+    #rp-toast-container {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        pointer-events: none;
+    }
+
+    .rp-toast {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 18px;
+        border-radius: 10px;
+        font-size: 13.5px;
+        font-weight: 500;
+        box-shadow: 0 4px 20px rgba(0,0,0,.12);
+        max-width: 320px;
+        animation: rpToastIn .25s ease;
+    }
+
+    @@keyframes rpToastIn {
+        from {
+            transform: translateX(40px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    .rp-toast-success {
+        background: #e9f5ec;
+        border: 1px solid #a9dfb4;
+        color: #2d7a3a;
+    }
+
+    .rp-toast-error {
+        background: #fdecea;
+        border: 1px solid #f5c6cb;
+        color: #c0392b;
+    }
+</style>
+
+<script>
+    (function(){
+        var _id = null, _type = null;
+
+        window.openPostReport = function(postId) {
+            _id = postId; _type = 'post';
+            document.getElementById('rp-title').textContent = 'Báo cáo bài đăng';
+            document.getElementById('rp-subtitle').textContent = 'Bài đăng #' + postId;
+            _open();
+        };
+        window.openCommentReport = function(commentId) {
+            _id = commentId; _type = 'comment';
+            document.getElementById('rp-title').textContent = 'Báo cáo bình luận';
+            document.getElementById('rp-subtitle').textContent = 'Bình luận #' + commentId;
+            _open();
+        };
+        function _open() {
+            document.querySelectorAll('input[name="rp-reason-radio"]').forEach(function(r){ r.checked=false; });
+            document.getElementById('rp-description').value = '';
+            document.getElementById('reportModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        window.closeReportModal = function() {
+            document.getElementById('reportModal').style.display = 'none';
+            document.body.style.overflow = '';
+            _id = null; _type = null;
+        };
+        window.submitReport = async function() {
+            var reason = document.querySelector('input[name="rp-reason-radio"]:checked')?.value;
+            if (!reason) { rpToast('Vui lòng chọn lý do báo cáo.', 'error'); return; }
+            var description = document.getElementById('rp-description').value;
+            var btn = document.getElementById('rp-submit-btn');
+            btn.disabled = true; btn.textContent = 'Đang gửi...';
+            var token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+            var url = _type === 'post' ? '/Report/SubmitPost' : '/Report/SubmitComment';
+            var idKey = _type === 'post' ? 'postId' : 'commentId';
+            var fd = new FormData();
+            fd.append(idKey, _id);
+            fd.append('reason', reason);
+            fd.append('description', description);
+            try {
+                var res = await fetch(url, { method:'POST', headers:{'RequestVerificationToken': token}, body:fd });
+                var data = await res.json();
+                closeReportModal();
+                rpToast(data.message, data.success ? 'success' : 'error');
+            } catch(e) {
+                rpToast('Có lỗi xảy ra, vui lòng thử lại.', 'error');
+            } finally {
+                btn.disabled = false; btn.textContent = '🚩 Gửi báo cáo';
+            }
+        };
+        window.rpToast = function(msg, type) {
+            var t = document.createElement('div');
+            t.className = 'rp-toast rp-toast-' + type;
+            t.innerHTML = '<span>' + (type==='success'?'✓':'⚠') + '</span><span>' + msg + '</span>';
+            document.getElementById('rp-toast-container').appendChild(t);
+            setTimeout(function(){ t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(function(){ t.remove(); },300); }, 3500);
+        };
+    })();
+</script>

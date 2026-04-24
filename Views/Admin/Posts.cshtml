@@ -1,0 +1,204 @@
+@model List<Post>
+@{
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Quản lý bài đăng";
+    ViewData["ActiveMenu"] = "posts";
+    int currentPage = ViewBag.CurrentPage;
+    int totalPages = ViewBag.TotalPages;
+    int totalCount = ViewBag.TotalCount;
+}
+
+<div class="admin-page-header">
+    <div>
+        <h1 class="page-title">Bài đăng</h1>
+        <span class="page-subtitle">@totalCount bài đăng trong hệ thống</span>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+    <form method="get" class="filter-form">
+        <div class="search-wrap">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" name="search" value="@ViewBag.Search" placeholder="Tìm tiêu đề, nội dung..." class="search-input" />
+        </div>
+        <select name="type" class="filter-select">
+            <option value="">Tất cả loại</option>
+            <option value="Adoption" selected="@(ViewBag.Type == "Adoption")">Adoption</option>
+            <option value="Thất lạc" selected="@(ViewBag.Type == "Thất lạc")">Thất lạc</option>
+            <option value="Chia sẻ" selected="@(ViewBag.Type == "Chia sẻ")">Chia sẻ</option>
+        </select>
+        <select name="status" class="filter-select">
+            <option value="">Tất cả trạng thái</option>
+            <option value="Active" selected="@(ViewBag.Status == "Active")">Active</option>
+            <option value="Hidden" selected="@(ViewBag.Status == "Hidden")">Hidden</option>
+            <option value="Pending" selected="@(ViewBag.Status == "Pending")">Pending</option>
+        </select>
+        <button type="submit" class="btn-filter">Lọc</button>
+        <a href="/admin/posts" class="btn-reset">Xoá lọc</a>
+    </form>
+</div>
+
+<!-- Table -->
+<div class="table-card">
+    <table class="admin-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Bài đăng</th>
+                <th>Tác giả</th>
+                <th>Loại</th>
+                <th>Trạng thái</th>
+                <th>Ngày đăng</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var post in Model)
+            {
+                var thumb = post.Images?.FirstOrDefault()?.ImagePath;
+                <tr id="post-row-@post.Id">
+                    <td class="text-muted small">@post.Id</td>
+                    <td>
+                        <div class="post-cell">
+                            @if (!string.IsNullOrEmpty(thumb))
+                            {
+                                <img src="@thumb" class="post-thumb" alt="" />
+                            }
+                            else
+                            {
+                                <div class="post-thumb-placeholder">🐾</div>
+                            }
+                            <div>
+                                <a href="/admin/posts/@post.Id" class="post-title-link fw-600">
+                                    @(post.Title?.Length > 45 ? post.Title.Substring(0, 45) + "..." : post.Title)
+                                </a>
+                                <div class="text-muted small">@(post.Content?.Length > 60 ? post.Content.Substring(0, 60) + "..." : post.Content)</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <a href="/admin/users/@post.UserId" class="user-link">@post.User?.Username</a>
+                    </td>
+                    <td><span class="type-badge">@post.Type</span></td>
+                    <td>
+                        <select class="status-select" data-post-id="@post.Id">
+                            <option value="Active" selected="@(post.Status == "Active")">Active</option>
+                            <option value="Hidden" selected="@(post.Status == "Hidden")">Hidden</option>
+                            <option value="Pending" selected="@(post.Status == "Pending")">Pending</option>
+                        </select>
+                    </td>
+                    <td class="text-muted">@post.CreatedAt.ToString("dd/MM/yy")</td>
+                    <td>
+                        <div class="action-btns">
+                            <a href="/admin/posts/@post.Id" class="btn-icon" title="Xem chi tiết">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            </a>
+                            <button class="btn-icon btn-danger" onclick="confirmDeletePost(@post.Id, '@(post.Title?.Replace("'", "\\'"))')" title="Xoá">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a1,1,0,0,1,1-1h4a1,1,0,0,1,1,1v2"/></svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (!Model.Any())
+    {
+        <div class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+            <p>Không tìm thấy bài đăng nào</p>
+        </div>
+    }
+</div>
+
+<!-- Pagination -->
+@if (totalPages > 1)
+{
+    <div class="pagination">
+        @if (currentPage > 1)
+        {
+            <a href="?page=@(currentPage - 1)&search=@ViewBag.Search&type=@ViewBag.Type&status=@ViewBag.Status" class="page-btn">← Trước</a>
+        }
+        @for (int i = Math.Max(1, currentPage - 2); i <= Math.Min(totalPages, currentPage + 2); i++)
+        {
+            <a href="?page=@i&search=@ViewBag.Search&type=@ViewBag.Type&status=@ViewBag.Status"
+               class="page-btn @(i == currentPage ? "active" : "")">@i</a>
+        }
+        @if (currentPage < totalPages)
+        {
+            <a href="?page=@(currentPage + 1)&search=@ViewBag.Search&type=@ViewBag.Type&status=@ViewBag.Status" class="page-btn">Tiếp →</a>
+        }
+    </div>
+}
+
+<!-- Delete Modal -->
+<div id="deleteModal" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+        <h3 class="modal-title">Xác nhận xoá bài đăng</h3>
+        <p class="modal-msg">Bạn có chắc muốn xoá bài "<strong id="deletePostTitle"></strong>"? Tất cả ảnh liên quan cũng sẽ bị xoá.</p>
+        <div class="modal-actions">
+            <button onclick="closeDeleteModal()" class="btn-cancel">Huỷ</button>
+            <button onclick="executeDeletePost()" class="btn-confirm-delete">Xoá</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const TOKEN = document.querySelector('meta[name="__RequestVerificationToken"]')?.content || '';
+
+    // Đổi trạng thái bài đăng
+    document.querySelectorAll('.status-select').forEach(sel => {
+        sel.addEventListener('change', async () => {
+            const postId = sel.dataset.postId;
+            const fd = new FormData();
+            fd.append('newStatus', sel.value);
+            const res = await fetch(`/admin/posts/${postId}/toggle-status`, {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': TOKEN },
+                body: fd
+            });
+            const data = await res.json();
+            showToast(data.message, data.success ? 'success' : 'error');
+        });
+    });
+
+    // Xoá bài đăng
+    let deleteTargetId = null;
+    function confirmDeletePost(id, title) {
+        deleteTargetId = id;
+        document.getElementById('deletePostTitle').textContent = title;
+        document.getElementById('deleteModal').style.display = 'flex';
+    }
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+        deleteTargetId = null;
+    }
+    async function executeDeletePost() {
+        if (!deleteTargetId) return;
+        const res = await fetch(`/admin/posts/${deleteTargetId}/delete`, {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': TOKEN }
+        });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById(`post-row-${deleteTargetId}`)?.remove();
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.message, 'error');
+        }
+        closeDeleteModal();
+    }
+
+    function showToast(msg, type) {
+        const t = document.createElement('div');
+        t.className = `toast toast-${type}`;
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.classList.add('show'), 10);
+        setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3000);
+    }
+</script>
+}

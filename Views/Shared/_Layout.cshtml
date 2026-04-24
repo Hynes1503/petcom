@@ -1,0 +1,1166 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — PetComm</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #f5f3ef;
+            --surface: #ffffff;
+            --surface-2: #f0ede8;
+            --border: #e8e4de;
+            --text-primary: #1c1a17;
+            --text-secondary: #6b6560;
+            --text-muted: #a09a93;
+            --accent: #c9622a;
+            --accent-light: #f9ede5;
+            --accent-hover: #b3541f;
+            --nav-h: 64px;
+            --radius: 12px;
+            --radius-sm: 7px;
+            --shadow-sm: 0 1px 4px rgba(28,26,23,.07);
+            --shadow-md: 0 6px 24px rgba(28,26,23,.10);
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        nav.site-nav {
+            background: var(--surface);
+            height: var(--nav-h);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 300;
+            display: flex;
+            align-items: center;
+            padding: 0 32px;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            text-decoration: none;
+        }
+
+        .nav-logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--accent);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .nav-logo-text {
+            font-family: 'DM Serif Display', serif;
+            font-size: 20px;
+            color: var(--text-primary);
+        }
+
+            .nav-logo-text span {
+                color: var(--accent);
+            }
+
+        .nav-center {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .nav-link-item {
+            padding: 7px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all .15s;
+        }
+
+            .nav-link-item:hover {
+                background: var(--surface-2);
+                color: var(--text-primary);
+            }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* User Dropdown Menu Styles */
+        .user-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .user-dropdown-trigger {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 6px 12px 6px 8px;
+            border-radius: 40px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+            .user-dropdown-trigger:hover {
+                background: var(--accent-light);
+                border-color: var(--accent);
+            }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.3;
+        }
+
+        .user-role {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .dropdown-icon {
+            color: var(--text-muted);
+            font-size: 12px;
+            transition: transform .2s;
+        }
+
+        .user-dropdown:hover .dropdown-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Dropdown Menu */
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 240px;
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all .2s ease;
+            z-index: 1000;
+        }
+
+        .user-dropdown:hover .dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .dropdown-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface-2);
+            border-radius: var(--radius) var(--radius) 0 0;
+        }
+
+            .dropdown-header .user-fullname {
+                font-weight: 600;
+                color: var(--text-primary);
+                margin-bottom: 4px;
+            }
+
+            .dropdown-header .user-email {
+                font-size: 12px;
+                color: var(--text-muted);
+            }
+
+        .dropdown-items {
+            padding: 8px 0;
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all .15s;
+            font-size: 14px;
+        }
+
+            .dropdown-item:hover {
+                background: var(--surface-2);
+                color: var(--accent);
+            }
+
+            .dropdown-item i {
+                width: 20px;
+                font-size: 16px;
+                color: var(--text-muted);
+            }
+
+            .dropdown-item:hover i {
+                color: var(--accent);
+            }
+
+        .dropdown-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 8px 0;
+        }
+
+        .dropdown-item.logout {
+            color: #e74c3c;
+        }
+
+            .dropdown-item.logout i {
+                color: #e74c3c;
+            }
+
+            .dropdown-item.logout:hover {
+                background: #fdecea;
+                color: #c0392b;
+            }
+
+        /* Admin dropdown item special style */
+        .dropdown-item.admin-item {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+            .dropdown-item.admin-item i {
+                color: var(--accent);
+            }
+
+            .dropdown-item.admin-item:hover {
+                background: var(--accent-light);
+                color: var(--accent-hover);
+            }
+
+        .badge-count {
+            background: var(--accent);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 20px;
+            margin-left: 8px;
+        }
+
+        .btn-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 18px;
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13.5px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all .15s;
+            border: 1px solid transparent;
+        }
+
+        .btn-nav-outline {
+            background: var(--surface);
+            border-color: var(--border);
+            color: var(--text-secondary);
+        }
+
+            .btn-nav-outline:hover {
+                background: var(--surface-2);
+                color: var(--text-primary);
+            }
+
+        .btn-nav-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+            .btn-nav-primary:hover {
+                background: var(--accent-hover);
+                transform: translateY(-1px);
+            }
+
+        /* ═══════════════════════════════════════════
+                                   NÚT ĐĂNG BÀI NỔI (FAB) - Global Styles
+                                ═══════════════════════════════════════════ */
+        .fab-post {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            z-index: 400;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 14px 22px;
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 24px rgba(201,98,42,.5);
+            transition: all .22s cubic-bezier(.34,1.56,.64,1);
+        }
+
+            .fab-post:hover {
+                transform: translateY(-4px) scale(1.04);
+                box-shadow: 0 10px 32px rgba(201,98,42,.6);
+            }
+
+            .fab-post .fab-icon {
+                font-size: 18px;
+                line-height: 1;
+            }
+
+        /* ═══════════════════════════════════════════
+                                   MODAL ĐĂNG BÀI - Global Styles
+                                ═══════════════════════════════════════════ */
+        #post-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(28,26,23,.6);
+            z-index: 600;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(6px);
+            padding: 20px;
+        }
+
+            #post-overlay.active {
+                display: flex;
+            }
+
+        .post-modal {
+            background: var(--surface);
+            border-radius: 18px;
+            padding: 32px 32px 28px;
+            width: 100%;
+            max-width: 560px;
+            position: relative;
+            box-shadow: var(--shadow-md), 0 32px 64px rgba(0,0,0,.25);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .post-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .post-modal-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 22px;
+            color: var(--text-primary);
+            font-weight: 400;
+        }
+
+            .post-modal-title span {
+                color: var(--accent);
+            }
+
+        .post-modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            font-size: 16px;
+            cursor: pointer;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .15s;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+            .post-modal-close:hover {
+                background: var(--border);
+                color: var(--text-primary);
+            }
+
+        /* Type selector */
+        .type-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+
+        .type-option {
+            flex: 1;
+            padding: 10px 8px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface-2);
+            cursor: pointer;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: all .15s;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+            .type-option:hover {
+                border-color: var(--accent);
+                color: var(--accent);
+            }
+
+            .type-option.selected {
+                border-color: var(--accent);
+                background: var(--accent-light);
+                color: var(--accent);
+                font-weight: 600;
+            }
+
+            .type-option .type-emoji {
+                display: block;
+                font-size: 20px;
+                margin-bottom: 4px;
+            }
+
+        /* Form elements */
+        .pm-form-group {
+            margin-bottom: 16px;
+        }
+
+        .pm-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+        .pm-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            color: var(--text-primary);
+            background: var(--surface);
+            transition: border-color .15s, box-shadow .15s;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+            .pm-input:focus {
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px rgba(201,98,42,.12);
+            }
+
+        .pm-textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            color: var(--text-primary);
+            background: var(--surface);
+            transition: border-color .15s, box-shadow .15s;
+            outline: none;
+            resize: vertical;
+            min-height: 100px;
+            box-sizing: border-box;
+        }
+
+            .pm-textarea:focus {
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px rgba(201,98,42,.12);
+            }
+
+        /* Image upload */
+        .img-upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-sm);
+            padding: 22px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all .15s;
+            background: var(--surface-2);
+            position: relative;
+        }
+
+            .img-upload-zone:hover,
+            .img-upload-zone.drag-over {
+                border-color: var(--accent);
+                background: var(--accent-light);
+            }
+
+            .img-upload-zone input[type=file] {
+                position: absolute;
+                inset: 0;
+                opacity: 0;
+                cursor: pointer;
+                width: 100%;
+                height: 100%;
+            }
+
+        .img-upload-icon {
+            font-size: 28px;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .img-upload-label {
+            font-size: 13.5px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .img-upload-hint {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Preview grid */
+        .img-preview-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .img-preview-item {
+            position: relative;
+            width: 74px;
+            height: 74px;
+        }
+
+            .img-preview-item img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                border-radius: 8px;
+                border: 1px solid var(--border);
+            }
+
+            .img-preview-item .remove-img {
+                position: absolute;
+                top: -6px;
+                right: -6px;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: #e74c3c;
+                color: #fff;
+                border: 2px solid var(--surface);
+                font-size: 11px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                line-height: 1;
+                font-weight: 700;
+            }
+
+        /* Submit area */
+        .pm-footer {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1px solid var(--border);
+        }
+
+        .pm-cancel {
+            padding: 10px 20px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface-2);
+            color: var(--text-secondary);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all .15s;
+        }
+
+            .pm-cancel:hover {
+                background: var(--border);
+                color: var(--text-primary);
+            }
+
+        .pm-submit {
+            padding: 10px 26px;
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .18s;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+            .pm-submit:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 14px rgba(201,98,42,.4);
+            }
+
+            .pm-submit:disabled {
+                opacity: .6;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+        .pm-success {
+            background: #e9f5ec;
+            border: 1px solid #a9dfb4;
+            color: #2d7a3a;
+            font-size: 13.5px;
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .pm-error {
+            background: #fdecea;
+            border: 1px solid rgba(192,57,43,.2);
+            color: #c0392b;
+            font-size: 13px;
+            padding: 10px 13px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 14px;
+            display: none;
+        }
+
+        .site-main {
+            flex: 1;
+        }
+
+        footer.site-footer {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 24px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .footer-logo {
+            font-family: 'DM Serif Display', serif;
+            font-size: 16px;
+            color: var(--text-primary);
+        }
+
+            .footer-logo span {
+                color: var(--accent);
+            }
+
+        .footer-copy {
+            font-size: 12.5px;
+            color: var(--text-muted);
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 18px;
+        }
+
+            .footer-links a {
+                font-size: 13px;
+                color: var(--text-muted);
+                text-decoration: none;
+                transition: color .15s;
+            }
+
+                .footer-links a:hover {
+                    color: var(--accent);
+                }
+
+        /* Responsive */
+        @@media (max-width: 768px) {
+            .user-info {
+                display: none;
+            }
+
+            .user-dropdown-trigger {
+                padding: 6px 8px;
+            }
+
+            .dropdown-menu {
+                position: fixed;
+                top: auto;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                border-radius: var(--radius) var(--radius) 0 0;
+                transform: translateY(100%);
+            }
+
+            .user-dropdown:hover .dropdown-menu {
+                transform: translateY(0);
+            }
+        }
+    </style>
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+
+    @{
+        var _navUser = Context.Session.GetString("Username");
+        var _navLoggedIn = _navUser != null;
+        var _navUserEmail = Context.Session.GetString("UserEmail");
+        var _navUserAvatar = _navUser?[0].ToString().ToUpper() ?? "U";
+        var _navUserRole = Context.Session.GetString("UserRole");
+        var _isAdmin = _navUserRole == "Admin";
+    }
+
+    <nav class="site-nav">
+        <a class="nav-logo" href="/">
+            <div class="nav-logo-icon">🐾</div>
+            <div class="nav-logo-text">Pet<span>Comm</span></div>
+        </a>
+        <div class="nav-center">
+            <a class="nav-link-item" href="/">Trang chủ</a>
+            <a class="nav-link-item" href="/?type=Adoption">Tìm nuôi</a>
+            <a class="nav-link-item" href="/?type=Thất lạc">Thất lạc</a>
+            <a class="nav-link-item" href="/?type=Chia sẻ">Cộng đồng</a>
+        </div>
+        <div class="nav-actions">
+            @if (_navLoggedIn)
+            {
+                <!-- User Dropdown Menu -->
+                <div class="user-dropdown">
+                    <div class="user-dropdown-trigger">
+                        <div class="user-avatar">@_navUserAvatar</div>
+                        <div class="user-info">
+                            <span class="user-name">@_navUser</span>
+                            <span class="user-role">@(_isAdmin ? "Quản trị viên" : "Thành viên")</span>
+                        </div>
+                        <i class="fas fa-chevron-down dropdown-icon"></i>
+                    </div>
+
+                    <div class="dropdown-menu">
+                        <div class="dropdown-header">
+                            <div class="user-fullname">@_navUser</div>
+                            <div class="user-email">@(_navUserEmail ?? "user@petcomm.com")</div>
+                        </div>
+
+                        <div class="dropdown-items">
+                            <!-- Admin Management Item - Chỉ hiển thị nếu là Admin -->
+                            @if (_isAdmin)
+                            {
+                                <a href="/admin" class="dropdown-item admin-item">
+                                    <i class="fas fa-crown"></i>
+                                    <span>📊 Quản lý hệ thống</span>
+                                </a>
+                                <div class="dropdown-divider"></div>
+                            }
+
+                            <a href="/Account/Profile" class="dropdown-item">
+                                <i class="fas fa-user-circle"></i>
+                                <span>Trang cá nhân</span>
+                            </a>
+                            <a href="/Adoption/ReceivedRequests" class="dropdown-item">
+                                <i class="fas fa-inbox"></i>
+                                <span>Yêu cầu nhận nuôi</span>
+                                @if (ViewBag.PendingRequestsCount > 0)
+                                {
+                                    <span class="badge-count">@ViewBag.PendingRequestsCount</span>
+                                }
+                            </a>
+                            <a href="/Adoption/MyRequests" class="dropdown-item">
+                                <i class="fas fa-paw"></i>
+                                <span>Yêu cầu của tôi</span>
+                            </a>
+                            <a href="/Bookmark/MyBookmarks" class="dropdown-item">
+                                <i class="fas fa-bookmark"></i>
+                                <span>Bài viết đã lưu</span>
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <a href="/Account/Logout" class="dropdown-item logout">
+                                <i class="fas fa-sign-out-alt"></i>
+                                <span>Đăng xuất</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <button class="btn-nav btn-nav-outline" onclick="openModal('login')">
+                    <i class="fas fa-sign-in-alt"></i> Đăng nhập
+                </button>
+                <button class="btn-nav btn-nav-primary" onclick="openModal('register')">
+                    <i class="fas fa-user-plus"></i> Đăng ký
+                </button>
+            }
+        </div>
+    </nav>
+
+    <div class="site-main">
+        @RenderBody()
+    </div>
+
+    <!-- MODAL ĐĂNG BÀI (Global) -->
+    <div id="post-overlay">
+        <div class="post-modal">
+            <div class="post-modal-header">
+                <div class="post-modal-title">Tạo bài đăng <span>mới</span></div>
+                <button class="post-modal-close" onclick="closePostModal()">✕</button>
+            </div>
+
+            <div id="pm-success" class="pm-success">✅ Đăng bài thành công! Trang sẽ tự động làm mới...</div>
+            <div id="pm-error" class="pm-error"></div>
+
+            <form id="post-form" enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+
+                <!-- Loại bài -->
+                <div class="pm-form-group">
+                    <label class="pm-label">Loại bài đăng</label>
+                    <div class="type-selector">
+                        <button type="button" class="type-option selected" data-value="Chia sẻ" onclick="selectType(this)">
+                            <i class="fa-solid fa-people-group"></i> Chia sẻ
+                        </button>
+                        <button type="button" class="type-option" data-value="Adoption" onclick="selectType(this)">
+                            <i class="fa-solid fa-cat"></i> Tìm nuôi
+                        </button>
+                        <button type="button" class="type-option" data-value="Thất lạc" onclick="selectType(this)">
+                            <i class="fa-solid fa-magnifying-glass"></i> Thất lạc
+                        </button>
+                    </div>
+                    <input type="hidden" id="pm-type" name="Type" value="Chia sẻ" />
+                </div>
+
+                <!-- Tiêu đề -->
+                <div class="pm-form-group">
+                    <label class="pm-label" for="pm-title">Tiêu đề <span style="color:#e74c3c">*</span></label>
+                    <input class="pm-input" type="text" id="pm-title" name="Title"
+                           placeholder="Nhập tiêu đề bài đăng..." maxlength="200" required />
+                </div>
+
+                <!-- Nội dung -->
+                <div class="pm-form-group">
+                    <label class="pm-label" for="pm-content">Nội dung <span style="color:#e74c3c">*</span></label>
+                    <textarea class="pm-textarea" id="pm-content" name="Content"
+                              placeholder="Chia sẻ câu chuyện của bạn..." rows="4" required></textarea>
+                </div>
+
+                <!-- Ảnh -->
+                <div class="pm-form-group">
+                    <label class="pm-label">Hình ảnh (tuỳ chọn)</label>
+                    <div class="img-upload-zone" id="upload-zone">
+                        <input type="file" id="pm-images" name="images" multiple accept="image/*"
+                               onchange="handleImgSelect(this)" />
+                        <span class="img-upload-icon">🖼️</span>
+                        <div class="img-upload-label">Nhấn hoặc kéo thả ảnh vào đây</div>
+                        <div class="img-upload-hint">PNG, JPG, WEBP — tối đa 10MB mỗi ảnh</div>
+                    </div>
+                    <div class="img-preview-grid" id="img-preview-grid"></div>
+                </div>
+
+                <div class="pm-footer">
+                    <button type="button" class="pm-cancel" onclick="closePostModal()">Huỷ</button>
+                    <button type="button" class="pm-submit" id="pm-submit-btn" onclick="submitPost()">
+                        <i class="fa-solid fa-plus"></i> Đăng bài
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- NÚT ĐĂNG BÀI NỔI (Global) -->
+    @if (_navLoggedIn)
+    {
+        <button class="fab-post" onclick="openPostModal()">
+            <i class="fa-solid fa-plus"></i> Đăng bài
+        </button>
+    }
+    else
+    {
+        <button class="fab-post" onclick="openModal('login')">
+            <i class="fa-solid fa-plus"></i> Đăng bài
+        </button>
+    }
+
+    <footer class="site-footer">
+        <div class="footer-logo">Pet<span>Comm</span></div>
+        <span class="footer-copy">© @DateTime.Now.Year PetComm — Cộng đồng yêu mèo Việt Nam</span>
+        <div class="footer-links">
+            <a href="/">Trang chủ</a>
+            <a href="/Home/Privacy">Chính sách</a>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Global JavaScript cho các modal -->
+    <script>
+        // ── AUTH MODAL ─────────────────────────────────────────────
+        function openModal(tab) {
+            var overlay = document.getElementById('modal-overlay');
+            if (overlay) {
+                overlay.classList.add('active');
+                if (typeof switchTab === 'function') {
+                    switchTab(tab);
+                }
+            }
+        }
+
+        function closeModal() {
+            var overlay = document.getElementById('modal-overlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+            }
+        }
+
+        // ── MODAL ĐĂNG BÀI ────────────────────────────────────────
+        var _selectedFiles = [];
+
+        function openPostModal() {
+            var overlay = document.getElementById('post-overlay');
+            if (overlay) {
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closePostModal() {
+            var overlay = document.getElementById('post-overlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+                resetPostForm();
+            }
+        }
+
+        function resetPostForm() {
+            var form = document.getElementById('post-form');
+            if (form) form.reset();
+            _selectedFiles = [];
+            var previewGrid = document.getElementById('img-preview-grid');
+            if (previewGrid) previewGrid.innerHTML = '';
+            var typeInput = document.getElementById('pm-type');
+            if (typeInput) typeInput.value = 'Chia sẻ';
+            var options = document.querySelectorAll('.type-option');
+            options.forEach(function(o) { o.classList.remove('selected'); });
+            var firstOption = document.querySelector('.type-option[data-value="Chia sẻ"]');
+            if (firstOption) firstOption.classList.add('selected');
+            var successEl = document.getElementById('pm-success');
+            var errorEl = document.getElementById('pm-error');
+            if (successEl) successEl.style.display = 'none';
+            if (errorEl) errorEl.style.display = 'none';
+            var submitBtn = document.getElementById('pm-submit-btn');
+            if (submitBtn) submitBtn.disabled = false;
+        }
+
+        function selectType(btn) {
+            var options = document.querySelectorAll('.type-option');
+            options.forEach(function(o) { o.classList.remove('selected'); });
+            btn.classList.add('selected');
+            var typeInput = document.getElementById('pm-type');
+            if (typeInput) typeInput.value = btn.getAttribute('data-value');
+        }
+
+        // Xử lý chọn ảnh
+        function handleImgSelect(input) {
+            var newFiles = Array.from(input.files);
+            newFiles.forEach(function(f) { _selectedFiles.push(f); });
+            renderImgPreviews();
+        }
+
+        function renderImgPreviews() {
+            var grid = document.getElementById('img-preview-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            _selectedFiles.forEach(function(f, idx) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var item = document.createElement('div');
+                    item.className = 'img-preview-item';
+                    item.innerHTML =
+                        '<img src="' + e.target.result + '" alt="Ảnh ' + (idx + 1) + '" />' +
+                        '<button type="button" class="remove-img" onclick="removeImg(' + idx + ')">✕</button>';
+                    grid.appendChild(item);
+                };
+                reader.readAsDataURL(f);
+            });
+        }
+
+        function removeImg(idx) {
+            _selectedFiles.splice(idx, 1);
+            renderImgPreviews();
+        }
+
+        // Drag & drop
+        var zone = document.getElementById('upload-zone');
+        if (zone) {
+            zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.classList.add('drag-over'); });
+            zone.addEventListener('dragleave', function() { zone.classList.remove('drag-over'); });
+            zone.addEventListener('drop', function(e) {
+                e.preventDefault();
+                zone.classList.remove('drag-over');
+                var files = Array.from(e.dataTransfer.files).filter(function(f) { return f.type.startsWith('image/'); });
+                files.forEach(function(f) { _selectedFiles.push(f); });
+                renderImgPreviews();
+            });
+        }
+
+        // Submit bài đăng
+        function submitPost() {
+            var title   = document.getElementById('pm-title')?.value.trim();
+            var content = document.getElementById('pm-content')?.value.trim();
+            var type    = document.getElementById('pm-type')?.value;
+
+            var errEl = document.getElementById('pm-error');
+            if (errEl) errEl.style.display = 'none';
+
+            if (!title) { showPmError('Vui lòng nhập tiêu đề bài đăng.'); return; }
+            if (!content) { showPmError('Vui lòng nhập nội dung bài đăng.'); return; }
+
+            var formData = new FormData();
+            formData.append('Title', title);
+            formData.append('Content', content);
+            formData.append('Type', type);
+
+            // Lấy AntiForgeryToken
+            var token = document.querySelector('#post-form input[name="__RequestVerificationToken"]');
+            if (token) formData.append('__RequestVerificationToken', token.value);
+
+            // Thêm ảnh
+            _selectedFiles.forEach(function(f) { formData.append('images', f); });
+
+            var btn = document.getElementById('pm-submit-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '⏳ Đang đăng...';
+            }
+
+            fetch('/UserPost/Create', {
+                method: 'POST',
+                body: formData
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    var successEl = document.getElementById('pm-success');
+                    if (successEl) successEl.style.display = 'block';
+                    if (btn) {
+                        btn.textContent = '✅ Thành công';
+                    }
+                    setTimeout(function() {
+                        closePostModal();
+                        window.location.reload();
+                    }, 1200);
+                } else {
+                    showPmError(data.message || 'Đăng bài thất bại, vui lòng thử lại.');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = '✏️ Đăng bài';
+                    }
+                }
+            })
+            .catch(function() {
+                showPmError('Có lỗi xảy ra, vui lòng thử lại.');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '✏️ Đăng bài';
+                }
+            });
+        }
+
+        function showPmError(msg) {
+            var el = document.getElementById('pm-error');
+            if (el) {
+                el.textContent = '⚠️ ' + msg;
+                el.style.display = 'block';
+            }
+        }
+
+        // Đóng modal khi click ngoài
+        var postOverlay = document.getElementById('post-overlay');
+        if (postOverlay) {
+            postOverlay.addEventListener('click', function(e) {
+                if (e.target === this) closePostModal();
+            });
+        }
+
+        // Đóng dropdown khi click ra ngoài (cho mobile)
+        document.addEventListener('click', function(e) {
+            var dropdown = document.querySelector('.user-dropdown');
+            if (dropdown && !dropdown.contains(e.target)) {
+                // Không đóng dropdown trên desktop vì nó hoạt động bằng hover
+                // Trên mobile, chúng ta có thể xử lý khác
+                if (window.innerWidth <= 768) {
+                    // Có thể thêm logic để đóng dropdown trên mobile
+                }
+            }
+        });
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+    @await Html.PartialAsync("_ReportModal")
+</body>
+</html>

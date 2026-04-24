@@ -1,0 +1,227 @@
+﻿@model petcomm.Models.Post
+@{
+    ViewData["Title"] = "Xóa bài đăng";
+    Layout = "_AdminLayout";
+    ViewData["ActiveMenu"] = "posts";
+}
+
+<style>
+    .delete-card {
+        max-width: 520px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+    }
+
+    .delete-header {
+        padding: 24px 28px 20px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .warning-icon {
+        width: 46px;
+        height: 46px;
+        background: var(--red-bg);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        flex-shrink: 0;
+        border: 1px solid rgba(192,57,43,0.15);
+    }
+
+    .delete-header-text h2 {
+        font-size: 17px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 5px;
+    }
+
+    .delete-header-text p {
+        font-size: 13.5px;
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+
+    .post-preview {
+        margin: 24px 28px;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+    }
+
+    .post-preview-header {
+        padding: 12px 16px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--text-muted);
+    }
+
+    .post-preview-body {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .preview-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .preview-key {
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--text-muted);
+        width: 90px;
+        flex-shrink: 0;
+        padding-top: 1px;
+    }
+
+    .preview-val {
+        font-size: 13.5px;
+        color: var(--text-primary);
+        font-weight: 500;
+        flex: 1;
+    }
+
+        .preview-val.title-val {
+            font-weight: 600;
+        }
+
+    .warning-box {
+        margin: 0 28px 24px;
+        background: rgba(192,57,43,0.06);
+        border: 1px solid rgba(192,57,43,0.18);
+        border-radius: var(--radius-sm);
+        padding: 13px 16px;
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .warning-box-icon {
+        font-size: 15px;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+
+    .warning-box-text {
+        font-size: 13px;
+        color: #8b3220;
+        line-height: 1.5;
+    }
+
+    .delete-footer {
+        padding: 18px 28px;
+        border-top: 1px solid var(--border);
+        background: var(--surface-2);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-bottom: 22px;
+    }
+
+        .breadcrumb a {
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+
+            .breadcrumb a:hover {
+                color: var(--accent);
+            }
+
+        .breadcrumb .sep {
+            opacity: 0.4;
+        }
+
+        .breadcrumb .current {
+            color: var(--red);
+            font-weight: 500;
+        }
+</style>
+
+<div class="breadcrumb">
+    <a href="/AdminPost">Bài đăng</a>
+    <span class="sep">›</span>
+    <span class="current">Xóa bài đăng</span>
+</div>
+
+<h1 class="page-title" style="margin-bottom:24px;">Xác nhận xóa</h1>
+
+<div class="delete-card">
+    <div class="delete-header">
+        <div class="warning-icon">🗑️</div>
+        <div class="delete-header-text">
+            <h2>Xóa bài đăng này?</h2>
+            <p>Hành động này không thể hoàn tác. Tất cả dữ liệu liên quan bao gồm hình ảnh và bình luận sẽ bị xóa vĩnh viễn.</p>
+        </div>
+    </div>
+
+    <div class="post-preview">
+        <div class="post-preview-header">Chi tiết bài đăng sẽ bị xóa</div>
+        <div class="post-preview-body">
+            <div class="preview-row">
+                <span class="preview-key">ID</span>
+                <span class="preview-val">
+                    <span style="font-family:monospace; background:var(--surface); border:1px solid var(--border); padding:2px 8px; border-radius:4px; font-size:12px;">#@Model.Id</span>
+                </span>
+            </div>
+            <div class="preview-row">
+                <span class="preview-key">Tiêu đề</span>
+                <span class="preview-val title-val">@Model.Title</span>
+            </div>
+            <div class="preview-row">
+                <span class="preview-key">Loại bài</span>
+                <span class="preview-val">
+                    <span style="background:var(--accent-light); color:var(--accent); padding:2px 9px; border-radius:20px; font-size:12px; font-weight:500;">@Model.Type</span>
+                </span>
+            </div>
+            <div class="preview-row">
+                <span class="preview-key">Trạng thái</span>
+                <span class="preview-val">
+                    <span class="status-badge @(Model.Status == "Active" ? "status-active" : "status-closed")">@Model.Status</span>
+                </span>
+            </div>
+            <div class="preview-row">
+                <span class="preview-key">Ngày tạo</span>
+                <span class="preview-val" style="color:var(--text-secondary);">@Model.CreatedAt.ToString("dd/MM/yyyy — HH:mm")</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="warning-box">
+        <span class="warning-box-icon">⚠️</span>
+        <span class="warning-box-text">
+            Dữ liệu sẽ bị xóa <strong>vĩnh viễn</strong> và không thể khôi phục. Hãy chắc chắn trước khi tiếp tục.
+        </span>
+    </div>
+
+    <form asp-action="Delete">
+        <input type="hidden" asp-for="Id" />
+        <div class="delete-footer">
+            <button type="submit" class="btn btn-danger">🗑️ Xác nhận xóa</button>
+            <a asp-action="Index" class="btn btn-ghost">Hủy, quay lại</a>
+        </div>
+    </form>
+</div>

@@ -1,0 +1,698 @@
+﻿@model List<petcomm.Models.AdoptionRequest>
+@{
+    ViewData["Title"] = "Quản lý yêu cầu nhận nuôi - PetComm";
+    Layout = "_Layout";
+    var post = ViewBag.Post as petcomm.Models.Post;
+}
+
+@section Styles {
+    <style>
+        .manage-container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+            .page-header h1 {
+                font-family: 'DM Serif Display', serif;
+                font-size: 32px;
+                margin-bottom: 8px;
+            }
+
+        .post-badge {
+            background: var(--surface-2);
+            padding: 16px;
+            border-radius: var(--radius);
+            margin-bottom: 24px;
+            border-left: 4px solid var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+            .post-badge h3 {
+                font-size: 16px;
+                margin: 0;
+            }
+
+            .post-badge .post-status {
+                font-size: 13px;
+                padding: 4px 12px;
+                border-radius: 20px;
+                background: #e9f5ec;
+                color: #2d7a3a;
+            }
+
+        .requests-stats {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            padding: 16px 24px;
+            border-radius: var(--radius);
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+            box-shadow: var(--shadow-sm);
+            transition: transform .2s;
+        }
+
+            .stat-card:hover {
+                transform: translateY(-2px);
+            }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .request-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: all .2s;
+        }
+
+            .request-card:hover {
+                box-shadow: var(--shadow-md);
+            }
+
+        .request-header {
+            padding: 20px 24px;
+            background: var(--surface-2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .requester-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .requester-avatar {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .requester-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .request-date {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-pending {
+            background: #fff3e0;
+            color: #e67e22;
+        }
+
+        .status-approved {
+            background: #e9f5ec;
+            color: #2d7a3a;
+        }
+
+        .status-rejected {
+            background: #fdecea;
+            color: #c0392b;
+        }
+
+        .status-cancelled {
+            background: #e8e8e8;
+            color: #7f8c8d;
+        }
+
+        .request-body {
+            padding: 24px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            background: var(--surface-2);
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            transition: background .2s;
+        }
+
+            .info-item:hover {
+                background: var(--accent-light);
+            }
+
+        .info-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .info-value {
+            font-size: 14px;
+            color: var(--text-primary);
+            word-break: break-word;
+        }
+
+        .request-message {
+            background: var(--surface-2);
+            padding: 16px;
+            border-radius: var(--radius-sm);
+            margin: 16px 0;
+            border-left: 3px solid var(--accent);
+        }
+
+        .admin-note {
+            background: #fff8e1;
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            margin-top: 12px;
+            font-size: 13px;
+            border-left: 3px solid #f59e0b;
+        }
+
+        .request-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn-approve, .btn-reject {
+            padding: 8px 20px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all .15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-approve {
+            background: #2d7a3a;
+            color: #fff;
+        }
+
+            .btn-approve:hover {
+                background: #1f5e2a;
+                transform: translateY(-1px);
+            }
+
+        .btn-reject {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+            .btn-reject:hover {
+                background: #c0392b;
+                transform: translateY(-1px);
+            }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+
+            .modal.active {
+                display: flex;
+            }
+
+        .modal-content {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            animation: modalSlideIn .3s ease;
+        }
+
+        @@keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-content h3 {
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modal-content p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .modal-content .note {
+            color: #e67e22;
+            font-size: 13px;
+            margin-top: 12px;
+            padding: 8px;
+            background: #fff3e0;
+            border-radius: var(--radius-sm);
+        }
+
+        .modal-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            margin: 16px 0;
+            resize: vertical;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+            .modal-textarea:focus {
+                outline: none;
+                border-color: var(--accent);
+            }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            background: var(--surface);
+            border-radius: var(--radius);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        @@media (max-width: 768px) {
+            .manage-container {
+                padding: 0 16px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .request-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+}
+
+<div class="manage-container">
+    <div class="page-header">
+        <h1><i class="fa-solid fa-users"></i> Quản lý yêu cầu nhận nuôi</h1>
+        <p style="color: var(--text-muted); margin-top: 8px;">
+            <i class="fa-regular fa-clock"></i> Xem và xử lý các yêu cầu nhận nuôi từ cộng đồng
+        </p>
+    </div>
+
+    <div class="post-badge">
+        <div>
+            <i class="fa-solid fa-paw" style="color: var(--accent);"></i>
+            <h3 style="display: inline-block; margin-left: 8px;">@post?.Title</h3>
+        </div>
+        @if (post?.Status == "Adopted")
+        {
+            <div class="post-status">
+                <i class="fa-solid fa-check-circle"></i> Đã nhận nuôi
+            </div>
+        }
+        else
+        {
+            <div class="post-status">
+                <i class="fa-regular fa-hourglass-half"></i> Đang tìm người nhận nuôi
+            </div>
+        }
+    </div>
+
+    <div class="requests-stats">
+        <div class="stat-card">
+            <div class="stat-number">@Model.Count(r => r.Status == "pending")</div>
+            <div class="stat-label"><i class="fa-regular fa-hourglass-half"></i> Đang chờ xử lý</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">@Model.Count(r => r.Status == "approved")</div>
+            <div class="stat-label"><i class="fa-solid fa-check-circle"></i> Đã duyệt</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">@Model.Count(r => r.Status == "rejected")</div>
+            <div class="stat-label"><i class="fa-solid fa-times-circle"></i> Đã từ chối</div>
+        </div>
+    </div>
+
+    @if (!Model.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fa-regular fa-inbox"></i>
+            </div>
+            <h3><i class="fa-regular fa-folder-open"></i> Chưa có yêu cầu nào</h3>
+            <p>Chưa có ai gửi yêu cầu nhận nuôi cho bài viết này.</p>
+            <a href="/UserPost/Details/@post?.Id" class="action-button" style="margin-top: 16px; display: inline-flex;">
+                <i class="fa-solid fa-arrow-left"></i> Quay lại bài viết
+            </a>
+        </div>
+    }
+    else
+    {
+        foreach (var request in Model)
+        {
+            <div class="request-card" id="request-@request.Id">
+                <div class="request-header">
+                    <div class="requester-info">
+                        <div class="requester-avatar">
+                            @request.Requester?.Username?.FirstOrDefault().ToString().ToUpper()
+                        </div>
+                        <div>
+                            <div class="requester-name">
+                                <i class="fa-regular fa-user"></i> @request.Requester?.Username
+                            </div>
+                            <div class="request-date">
+                                <i class="fa-regular fa-calendar"></i> Gửi lúc: @request.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="status-badge status-@request.Status.ToLower()">
+                        @{
+                            var statusIcon = request.Status == "pending" ? "fa-regular fa-hourglass-half" :
+                            request.Status == "approved" ? "fa-solid fa-check-circle" :
+                            request.Status == "rejected" ? "fa-solid fa-times-circle" : "fa-solid fa-ban";
+                            var statusText = request.Status == "pending" ? "Đang chờ" :
+                            request.Status == "approved" ? "Đã duyệt" :
+                            request.Status == "rejected" ? "Đã từ chối" : "Đã hủy";
+                        }
+                        <i class="@statusIcon"></i> @statusText
+                    </div>
+                </div>
+
+                <div class="request-body">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="fa-solid fa-phone"></i> Số điện thoại
+                            </div>
+                            <div class="info-value">@request.PhoneNumber</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="fa-solid fa-location-dot"></i> Địa chỉ
+                            </div>
+                            <div class="info-value">@request.Address</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="fa-solid fa-dog"></i> Kinh nghiệm
+                            </div>
+                            <div class="info-value">@(string.IsNullOrEmpty(request.Experience) ? "Chưa cung cấp" : request.Experience)</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="fa-solid fa-house"></i> Loại nhà ở
+                            </div>
+                            <div class="info-value">@(string.IsNullOrEmpty(request.HousingType) ? "Chưa cung cấp" : request.HousingType)</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">
+                                <i class="fa-solid fa-paw"></i> Có nuôi thú khác
+                            </div>
+                            <div class="info-value">@(request.HasOtherPets ? "Có" : "Không")</div>
+                        </div>
+                    </div>
+
+                    <div class="request-message">
+                        <div class="info-label" style="margin-bottom: 8px;">
+                            <i class="fa-regular fa-message"></i> Lời nhắn:
+                        </div>
+                        @request.Message
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(request.Reason))
+                    {
+                        <div class="request-message">
+                            <div class="info-label" style="margin-bottom: 8px;">
+                                <i class="fa-regular fa-heart"></i> Lý do muốn nhận nuôi:
+                            </div>
+                            @request.Reason
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(request.AdminNote))
+                    {
+                        <div class="admin-note">
+                            <div class="info-label" style="margin-bottom: 4px;">
+                                <i class="fa-regular fa-note-sticky"></i> Ghi chú:
+                            </div>
+                            @request.AdminNote
+                        </div>
+                    }
+
+                    @if (request.Status == "pending")
+                    {
+                        <div class="request-actions">
+                            <button class="btn-approve" onclick="openApproveModal(@request.Id)">
+                                <i class="fa-solid fa-check"></i> Xác nhận nhận nuôi
+                            </button>
+                            <button class="btn-reject" onclick="openRejectModal(@request.Id)">
+                                <i class="fa-solid fa-times"></i> Từ chối
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<!-- Approve Modal -->
+<div id="approveModal" class="modal">
+    <div class="modal-content">
+        <h3>
+            <i class="fa-solid fa-check-circle" style="color: #2d7a3a;"></i>
+            Xác nhận nhận nuôi
+        </h3>
+        <p>Bạn có chắc chắn muốn xác nhận người này nhận nuôi thú cưng?</p>
+        <div class="note">
+            <i class="fa-solid fa-info-circle"></i>
+            Lưu ý: Các yêu cầu khác sẽ tự động bị từ chối.
+        </div>
+        <textarea id="approveNote" class="modal-textarea" rows="3"
+                  placeholder="Ghi chú (tùy chọn)"></textarea>
+        <div class="modal-actions">
+            <button class="btn-reject" onclick="closeModal('approveModal')">
+                <i class="fa-solid fa-times"></i> Hủy
+            </button>
+            <button class="btn-approve" onclick="processApprove()">
+                <i class="fa-solid fa-check"></i> Xác nhận
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div id="rejectModal" class="modal">
+    <div class="modal-content">
+        <h3>
+            <i class="fa-solid fa-times-circle" style="color: #e74c3c;"></i>
+            Từ chối yêu cầu
+        </h3>
+        <p>Bạn có chắc chắn muốn từ chối yêu cầu này?</p>
+        <textarea id="rejectNote" class="modal-textarea" rows="3"
+                  placeholder="Lý do từ chối (tùy chọn)"></textarea>
+        <div class="modal-actions">
+            <button class="btn-approve" onclick="closeModal('rejectModal')">
+                <i class="fa-solid fa-times"></i> Hủy
+            </button>
+            <button class="btn-reject" onclick="processReject()">
+                <i class="fa-solid fa-check"></i> Từ chối
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let currentRequestId = null;
+
+        function openApproveModal(requestId) {
+            currentRequestId = requestId;
+            document.getElementById('approveModal').classList.add('active');
+            document.getElementById('approveNote').value = '';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function openRejectModal(requestId) {
+            currentRequestId = requestId;
+            document.getElementById('rejectModal').classList.add('active');
+            document.getElementById('rejectNote').value = '';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            currentRequestId = null;
+            document.body.style.overflow = '';
+        }
+
+        async function processApprove() {
+            const note = document.getElementById('approveNote').value;
+            const btn = document.querySelector('#approveModal .btn-approve');
+            const originalText = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+
+            try {
+                const response = await fetch('/Adoption/Approve', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: `requestId=${currentRequestId}&adminNote=${encodeURIComponent(note)}`
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    window.location.reload();
+                } else {
+                    alert('❌ Lỗi: ' + data.message);
+                    closeModal('approveModal');
+                }
+            } catch (error) {
+                alert('❌ Có lỗi xảy ra, vui lòng thử lại.');
+                closeModal('approveModal');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        async function processReject() {
+            const note = document.getElementById('rejectNote').value;
+            const btn = document.querySelector('#rejectModal .btn-reject');
+            const originalText = btn.innerHTML;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+
+            try {
+                const response = await fetch('/Adoption/Reject', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: `requestId=${currentRequestId}&adminNote=${encodeURIComponent(note)}`
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    window.location.reload();
+                } else {
+                    alert('❌ Lỗi: ' + data.message);
+                    closeModal('rejectModal');
+                }
+            } catch (error) {
+                alert('❌ Có lỗi xảy ra, vui lòng thử lại.');
+                closeModal('rejectModal');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        // Close modal on outside click
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        // Close modal on ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal').forEach(modal => {
+                    modal.classList.remove('active');
+                });
+                document.body.style.overflow = '';
+            }
+        });
+    </script>
+}

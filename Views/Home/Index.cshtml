@@ -1,0 +1,1835 @@
+﻿@model IEnumerable<petcomm.Models.Post>
+@{
+    ViewData["Title"] = "PetComm — Cộng đồng yêu mèo";
+    Layout = "_Layout";
+    var username = Context.Session.GetString("Username");
+    var isLoggedIn = username != null;
+    var currentUserId = Context.Session.GetInt32("UserId");
+
+    // Chỉ lấy các bài đăng không bị ẩn (Status != "Hidden")
+    var visiblePosts = Model.Where(p => p.Status != "Hidden").ToList();
+    var totalPosts = visiblePosts.Count();
+    var adoptCount = visiblePosts.Count(p => p.Type == "Adoption");
+    var lostCount = visiblePosts.Count(p => p.Type == "Thất lạc");
+    var shareCount = visiblePosts.Count(p => p.Type == "Chia sẻ");
+    var currentType = Context.Request.Query["type"].ToString();
+
+    var commentCounts = ViewBag.CommentCounts as Dictionary<int, int> ?? new Dictionary<int, int>();
+    var bookmarkedByUser = ViewBag.BookmarkedByUser as List<int> ?? new List<int>();
+}
+
+@section Styles {
+    <style>
+        /* HERO */
+        .hero {
+            background: linear-gradient(135deg, #1c1a17 0%, #2e2419 60%, #3d2d18 100%);
+            padding: 64px 32px 56px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .hero::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: radial-gradient(ellipse 70% 60% at 60% 50%, rgba(201,98,42,.18) 0%, transparent 70%);
+                pointer-events: none;
+            }
+
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(201,98,42,.15);
+            border: 1px solid rgba(201,98,42,.3);
+            color: #e8892e;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 12.5px;
+            font-weight: 600;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+
+        .hero h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 46px;
+            color: #fff;
+            line-height: 1.15;
+            margin-bottom: 16px;
+            letter-spacing: -.02em;
+        }
+
+            .hero h1 span {
+                color: #e8892e;
+            }
+
+        .hero p {
+            font-size: 16px;
+            color: rgba(255,255,255,.6);
+            max-width: 480px;
+            margin: 0 auto 32px;
+            line-height: 1.6;
+        }
+
+        .hero-filters {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filter-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 20px;
+            border-radius: 40px;
+            font-size: 13.5px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            border: 1px solid rgba(255,255,255,.15);
+            color: rgba(255,255,255,.75);
+            background: rgba(255,255,255,.07);
+            transition: all .18s;
+        }
+
+            .filter-pill:hover,
+            .filter-pill.active {
+                background: var(--accent);
+                border-color: var(--accent);
+                color: #fff;
+                transform: translateY(-1px);
+            }
+
+        /* LAYOUT */
+        .content-wrap {
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 40px 24px 60px;
+            display: grid;
+            grid-template-columns: 1fr 288px;
+            gap: 32px;
+            align-items: start;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 22px;
+            color: var(--text-primary);
+            font-weight: 400;
+        }
+
+        .section-count {
+            font-size: 13px;
+            color: var(--text-muted);
+            background: var(--surface-2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        /* POST CARD */
+        .post-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .post-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: box-shadow .2s, transform .2s;
+        }
+
+            .post-card:hover {
+                box-shadow: var(--shadow-md);
+                transform: translateY(-2px);
+            }
+
+        /* Images */
+        .post-images {
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .post-img-main {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            display: block;
+            transition: transform .3s;
+        }
+
+        .post-card:hover .post-img-main {
+            transform: scale(1.02);
+        }
+
+        .post-img-more {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,.62);
+            color: #fff;
+            font-size: 12.5px;
+            font-weight: 600;
+            padding: 4px 11px;
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,.2);
+        }
+
+        .post-img-strip {
+            display: flex;
+            gap: 3px;
+            background: #000;
+        }
+
+            .post-img-strip img {
+                flex: 1;
+                height: 72px;
+                object-fit: cover;
+                cursor: pointer;
+                opacity: .85;
+                transition: opacity .15s;
+            }
+
+                .post-img-strip img:hover {
+                    opacity: 1;
+                }
+
+        /* Card body */
+        .post-body {
+            padding: 18px 20px 20px;
+        }
+
+        .post-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 11px;
+            border-radius: 20px;
+            font-size: 11.5px;
+            font-weight: 600;
+            letter-spacing: .02em;
+        }
+
+            .type-badge.share {
+                background: #e8f4fd;
+                color: #2471a3;
+            }
+
+            .type-badge.adopt {
+                background: #e9f5ec;
+                color: #2d7a3a;
+            }
+
+            .type-badge.lost {
+                background: #fef9e7;
+                color: #b7950b;
+            }
+
+        .post-date {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .post-title {
+            font-size: 16.5px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .post-excerpt {
+            font-size: 13.5px;
+            color: var(--text-secondary);
+            line-height: 1.65;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .post-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .read-more {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--accent);
+            text-decoration: none;
+            transition: gap .15s;
+            white-space: nowrap;
+        }
+
+            .read-more:hover {
+                gap: 8px;
+            }
+
+        /* ACTIONS */
+        .post-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 13px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--surface-2);
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all .15s;
+            font-family: 'DM Sans', sans-serif;
+            white-space: nowrap;
+        }
+
+            .action-btn:hover {
+                background: var(--accent-light);
+                border-color: var(--accent);
+                color: var(--accent);
+            }
+
+            .action-btn.saved {
+                background: #fff8e1;
+                border-color: #f59e0b;
+                color: #d97706;
+            }
+
+            .action-btn.cmt-open {
+                background: var(--accent-light);
+                border-color: var(--accent);
+                color: var(--accent);
+            }
+
+        /* COMMENTS SECTION INSIDE CARD */
+        .comment-section {
+            display: none;
+            border-top: 1px solid var(--border);
+            padding: 16px 20px 20px;
+            background: var(--surface-2);
+        }
+
+            .comment-section.open {
+                display: block;
+            }
+
+        .comment-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .comment-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+            .comment-avatar img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+        .comment-bubble {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 0 10px 10px 10px;
+            padding: 8px 12px;
+            flex: 1;
+        }
+
+        .comment-username {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 3px;
+        }
+
+        .comment-text {
+            font-size: 13.5px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .comment-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .comment-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px solid var(--border);
+        }
+
+        .reply-btn, .toggle-replies-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 11px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: all .15s;
+        }
+
+            .reply-btn:hover, .toggle-replies-btn:hover {
+                background: var(--surface-2);
+                color: var(--accent);
+            }
+
+        .reply-form {
+            margin-top: 10px;
+            padding: 10px;
+            background: var(--surface);
+            border-radius: var(--radius-sm);
+        }
+
+        .reply-input {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            resize: vertical;
+            margin-bottom: 6px;
+        }
+
+            .reply-input:focus {
+                outline: none;
+                border-color: var(--accent);
+            }
+
+        .reply-form-actions {
+            display: flex;
+            gap: 6px;
+            justify-content: flex-end;
+        }
+
+        .reply-cancel, .reply-submit {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all .15s;
+        }
+
+        .reply-cancel {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+            .reply-cancel:hover {
+                background: var(--border);
+            }
+
+        .reply-submit {
+            background: var(--accent);
+            border: none;
+            color: #fff;
+        }
+
+            .reply-submit:hover {
+                background: var(--accent-hover);
+            }
+
+        .replies-container {
+            margin-top: 10px;
+            padding-left: 15px;
+            border-left: 2px solid var(--border);
+        }
+
+        .reply-item {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            padding: 6px;
+            background: var(--surface);
+            border-radius: var(--radius-sm);
+        }
+
+        .reply-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 600;
+            color: #fff;
+            overflow: hidden;
+        }
+
+            .reply-avatar img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+
+        .reply-content {
+            flex: 1;
+        }
+
+        .reply-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 2px;
+        }
+
+        .reply-username {
+            font-weight: 600;
+            font-size: 11px;
+            color: var(--text-primary);
+        }
+
+        .reply-time {
+            font-size: 9px;
+            color: var(--text-muted);
+        }
+
+        .reply-edited {
+            font-size: 9px;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .reply-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .reply-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .reply-action-btn {
+            background: none;
+            border: none;
+            font-size: 10px;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+            .reply-action-btn:hover {
+                background: var(--surface-2);
+                color: var(--accent);
+            }
+
+        .no-replies {
+            padding: 6px 0;
+            color: var(--text-muted);
+            font-size: 11px;
+            text-align: center;
+        }
+
+        .comment-input-wrap {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+            align-items: flex-end;
+        }
+
+        .comment-input {
+            flex: 1;
+            padding: 9px 13px;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13.5px;
+            background: var(--surface);
+            color: var(--text-primary);
+            outline: none;
+            resize: none;
+            transition: border-color .15s;
+            line-height: 1.4;
+        }
+
+            .comment-input:focus {
+                border-color: var(--accent);
+            }
+
+        .comment-submit {
+            padding: 9px 18px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: 'DM Sans', sans-serif;
+            transition: background .15s;
+            white-space: nowrap;
+        }
+
+            .comment-submit:hover {
+                background: var(--accent-hover);
+            }
+
+        .comment-login-note {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 10px 0 4px;
+        }
+
+        /* Empty state */
+        .empty-state {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 60px 30px;
+            text-align: center;
+        }
+
+        .empty-icon {
+            font-size: 44px;
+            margin-bottom: 14px;
+            opacity: .5;
+        }
+
+        .empty-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .empty-sub {
+            font-size: 13.5px;
+            color: var(--text-muted);
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: sticky;
+            top: calc(var(--nav-h) + 24px);
+        }
+
+        .sidebar-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .sidebar-card-title {
+            font-size: 11.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .09em;
+            color: var(--text-muted);
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .quick-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 9px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 13.5px;
+        }
+
+            .quick-stat:last-child {
+                border-bottom: none;
+            }
+
+        .quick-stat-label {
+            color: var(--text-secondary);
+        }
+
+        .quick-stat-val {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .cta-box {
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            border-radius: var(--radius);
+            padding: 22px 20px;
+            color: #fff;
+            text-align: center;
+        }
+
+            .cta-box h3 {
+                font-family: 'DM Serif Display', serif;
+                font-size: 18px;
+                margin-bottom: 8px;
+                font-weight: 400;
+            }
+
+            .cta-box p {
+                font-size: 13px;
+                opacity: .85;
+                margin-bottom: 16px;
+                line-height: 1.5;
+            }
+
+        .cta-btn {
+            display: block;
+            background: #fff;
+            color: var(--accent);
+            padding: 9px 20px;
+            border-radius: var(--radius-sm);
+            font-size: 13.5px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all .15s;
+        }
+
+            .cta-btn:hover {
+                background: #fff3ed;
+                transform: translateY(-1px);
+            }
+
+        .sidebar-nav-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 13.5px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: all .15s;
+            margin-bottom: 4px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+        }
+
+            .sidebar-nav-link:hover {
+                background: var(--accent-light);
+                color: var(--accent);
+            }
+
+        /* MODAL (auth) */
+        .overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(28,26,23,.55);
+            z-index: 500;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            padding: 20px;
+        }
+
+            .overlay.active {
+                display: flex;
+            }
+
+        .modal {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 36px 32px 32px;
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            box-shadow: var(--shadow-md), 0 32px 64px rgba(0,0,0,.2);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 14px;
+            right: 16px;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            font-size: 16px;
+            cursor: pointer;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .15s;
+            line-height: 1;
+        }
+
+            .modal-close:hover {
+                background: var(--border);
+                color: var(--text-primary);
+            }
+
+        .modal-logo {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin-bottom: 24px;
+        }
+
+        .modal-logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--accent);
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .modal-logo-text {
+            font-family: 'DM Serif Display', serif;
+            font-size: 18px;
+            color: var(--text-primary);
+        }
+
+            .modal-logo-text span {
+                color: var(--accent);
+            }
+
+        .tab-btns {
+            display: flex;
+            background: var(--surface-2);
+            border-radius: var(--radius-sm);
+            padding: 3px;
+            margin-bottom: 26px;
+            gap: 3px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 9px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            border-radius: calc(var(--radius-sm) - 2px);
+            transition: all .15s;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+            .tab-btn.active {
+                background: var(--surface);
+                color: var(--accent);
+                box-shadow: 0 1px 4px rgba(0,0,0,.1);
+            }
+
+        .tab-content {
+            display: none;
+        }
+
+            .tab-content.active {
+                display: block;
+            }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 13px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            color: var(--text-primary);
+            background: var(--surface);
+            transition: border-color .15s, box-shadow .15s;
+            outline: none;
+        }
+
+            .form-input:focus {
+                border-color: var(--accent);
+                box-shadow: 0 0 0 3px rgba(201,98,42,.12);
+            }
+
+        .btn-submit {
+            width: 100%;
+            padding: 11px;
+            margin-top: 6px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .15s;
+        }
+
+            .btn-submit:hover {
+                background: var(--accent-hover);
+            }
+
+        .error-msg {
+            background: #fdecea;
+            border: 1px solid rgba(192,57,43,.2);
+            color: #c0392b;
+            font-size: 13px;
+            padding: 10px 13px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 14px;
+        }
+
+        /* LIGHTBOX */
+        #lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.9);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+            #lightbox.open {
+                display: flex;
+            }
+
+        .lb-close {
+            position: fixed;
+            top: 16px;
+            right: 20px;
+            background: rgba(255,255,255,.12);
+            border: 1px solid rgba(255,255,255,.22);
+            color: #fff;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background .15s;
+            z-index: 10001;
+            line-height: 1;
+        }
+
+            .lb-close:hover {
+                background: rgba(255,255,255,.25);
+            }
+
+        .lb-nav {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,.12);
+            border: 1px solid rgba(255,255,255,.22);
+            color: #fff;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            font-size: 30px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background .15s;
+            z-index: 10001;
+            line-height: 1;
+            padding: 0;
+        }
+
+            .lb-nav:hover {
+                background: rgba(255,255,255,.25);
+            }
+
+            .lb-nav.prev {
+                left: 16px;
+            }
+
+            .lb-nav.next {
+                right: 16px;
+            }
+
+        .lb-inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 14px;
+            max-width: 90vw;
+            max-height: 90vh;
+        }
+
+        #lbImg {
+            max-width: 82vw;
+            max-height: 70vh;
+            border-radius: 10px;
+            object-fit: contain;
+            transition: opacity .2s;
+            box-shadow: 0 20px 60px rgba(0,0,0,.5);
+        }
+
+        .lb-caption {
+            color: rgba(255,255,255,.5);
+            font-size: 13px;
+            letter-spacing: .02em;
+        }
+
+        .lb-strip {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 82vw;
+        }
+
+        .lb-thumb {
+            width: 58px;
+            height: 58px;
+            border-radius: 8px;
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid transparent;
+            opacity: .5;
+            transition: all .15s;
+        }
+
+            .lb-thumb:hover {
+                opacity: .8;
+            }
+
+            .lb-thumb.active {
+                opacity: 1;
+                border-color: #e8892e;
+            }
+
+        /* FAB */
+        .fab-post {
+            position: fixed;
+            bottom: 32px;
+            right: 32px;
+            z-index: 400;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 14px 22px;
+            background: linear-gradient(135deg, var(--accent), #e8892e);
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 24px rgba(201,98,42,.5);
+            transition: all .22s cubic-bezier(.34,1.56,.64,1);
+        }
+
+            .fab-post:hover {
+                transform: translateY(-4px) scale(1.04);
+                box-shadow: 0 10px 32px rgba(201,98,42,.6);
+            }
+
+            .fab-post .fab-icon {
+                font-size: 18px;
+                line-height: 1;
+            }
+
+        /* Hidden post indicator */
+        .post-card.hidden {
+            opacity: 0.6;
+            filter: grayscale(0.3);
+            position: relative;
+        }
+
+            .post-card.hidden::after {
+                content: "⚠️ Bài viết đã bị ẩn";
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background: rgba(0,0,0,0.7);
+                color: #ff6b6b;
+                padding: 4px 10px;
+                border-radius: 20px;
+                font-size: 11px;
+                font-weight: 500;
+                z-index: 10;
+            }
+    </style>
+}
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-eyebrow">🐾 Cộng đồng thú cưng Việt Nam</div>
+    <h1>Kết nối những trái tim<br><span>yêu mèo</span></h1>
+    <p>Chia sẻ khoảnh khắc, tìm mái ấm cho thú cưng, và giúp đỡ những bé lạc đường.</p>
+    <div class="hero-filters">
+        <a class="filter-pill @(string.IsNullOrEmpty(currentType) ? "active" : "")" href="/"><i class="fa-solid fa-house"></i> Tất cả</a>
+        <a class="filter-pill @(currentType == "Chia sẻ" ? "active" : "")" href="/?type=Chia sẻ"><i class="fa-solid fa-people-group"></i> Cộng đồng</a>
+        <a class="filter-pill @(currentType == "Adoption" ? "active" : "")" href="/?type=Adoption"><i class="fa-solid fa-cat"></i> Tìm nuôi</a>
+        <a class="filter-pill @(currentType == "Thất lạc" ? "active" : "")" href="/?type=Thất lạc"><i class="fa-solid fa-magnifying-glass"></i> Thất lạc</a>
+    </div>
+</section>
+
+<!-- CONTENT -->
+<div class="content-wrap">
+    <div>
+        <div class="section-header">
+            <h2 class="section-title">Bài đăng mới nhất</h2>
+            <span class="section-count">@totalPosts bài</span>
+        </div>
+
+        @if (!visiblePosts.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                <div class="empty-title">Chưa có bài đăng nào</div>
+                <div class="empty-sub">Hãy đăng nhập và tạo bài đăng đầu tiên!</div>
+            </div>
+        }
+        else
+        {
+            <div class="post-list">
+                @foreach (var post in visiblePosts)
+                {
+                    var badgeClass = post.Type == "Adoption" ? "adopt" : (post.Type == "Thất lạc" ? "lost" : "share");
+                    var badgeLabel = post.Type == "Adoption" ? "Tìm nuôi" : (post.Type == "Thất lạc" ? "Thất lạc" : "Chia sẻ");
+                    var imgs = post.Images?.ToList();
+                    var hasImages = imgs != null && imgs.Any();
+                    var isSaved = bookmarkedByUser.Contains(post.Id);
+                    var cntComment = commentCounts.GetValueOrDefault(post.Id, 0);
+                    var isOwnPost = currentUserId.HasValue && post.UserId == currentUserId.Value;
+                    var isHidden = post.Status == "Hidden";
+
+                    <div class="post-card @(isHidden ? "hidden" : "")" data-post-id="@post.Id">
+                        @* ── ẢNH ── *@
+                        @if (hasImages)
+                        {
+                            var allPaths = imgs!.Select(i => "/" + i.ImagePath!.TrimStart('/')).ToList();
+                            var jsonPaths = System.Text.Json.JsonSerializer.Serialize(allPaths);
+
+                            if (imgs!.Count == 1)
+                            {
+                                <div class="post-images lb-trigger"
+                                     data-images='@Html.Raw(jsonPaths)'
+                                     data-index="0">
+                                    <img class="post-img-main"
+                                         src="/@imgs[0].ImagePath!.TrimStart('/')"
+                                         alt="@post.Title" loading="lazy" />
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="post-images">
+                                    <div class="lb-trigger"
+                                         data-images='@Html.Raw(jsonPaths)'
+                                         data-index="0"
+                                         style="position:relative; cursor:pointer;">
+                                        <img class="post-img-main"
+                                             src="/@imgs[0].ImagePath!.TrimStart('/')"
+                                             alt="@post.Title" loading="lazy" />
+                                        <span class="post-img-more">+@(imgs.Count - 1) ảnh</span>
+                                    </div>
+                                    <div class="post-img-strip">
+                                        @for (int si = 1; si < Math.Min(imgs!.Count, 4); si++)
+                                        {
+                                            <img class="lb-trigger"
+                                                 src="/@imgs[si].ImagePath!.TrimStart('/')"
+                                                 alt="Ảnh @(si + 1)"
+                                                 loading="lazy"
+                                                 data-images='@Html.Raw(jsonPaths)'
+                                                 data-index="@si" />
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }
+
+                        @* ── BODY ── *@
+                        <div class="post-body">
+                            <div class="post-meta">
+                                <span class="type-badge @badgeClass">@badgeLabel</span>
+                                <span class="post-date">@post.CreatedAt.ToString("dd/MM/yyyy")</span>
+                                @if (isHidden)
+                                {
+                                    <span class="type-badge" style="background:#fdecea;color:#c0392b;">🚫 Đã ẩn</span>
+                                }
+                            </div>
+                            <div class="post-title">@post.Title</div>
+                            <div class="post-excerpt">@post.Content</div>
+
+                            <div class="post-footer">
+                                <div class="post-actions">
+                                    <button class="action-btn @(isSaved ? "saved" : "")"
+                                            data-post-id="@post.Id"
+                                            onclick="toggleBookmark(this, @post.Id)">
+                                        @(isSaved ? "🔖 Đã lưu" : "🔖 Lưu bài")
+                                    </button>
+                                    <button class="action-btn"
+                                            id="cmt-btn-@post.Id"
+                                            onclick="toggleComments(this, @post.Id)">
+                                        <i class="fa-regular fa-comment"></i> <span class="cmt-count">@cntComment</span> bình luận
+                                    </button>
+                                    @if (isLoggedIn && !isOwnPost && !isHidden)
+                                    {
+                                        <button class="rp-post-btn" onclick="openPostReport(@post.Id)" title="Báo cáo bài đăng vi phạm">
+                                            🚩 Báo cáo
+                                        </button>
+                                    }
+                                </div>
+                                <a href="/UserPost/Details/@post.Id" class="read-more">Xem thêm →</a>
+                            </div>
+                        </div>
+
+                        @* ── COMMENT ACCORDION (chỉ hiển thị nếu bài không bị ẩn) ── *@
+                        @if (!isHidden)
+                        {
+                            <div class="comment-section" id="comments-@post.Id">
+                                <div class="comment-list" id="comment-list-@post.Id"></div>
+                                @if (isLoggedIn)
+                                {
+                                    <div class="comment-input-wrap">
+                                        <textarea class="comment-input" rows="1"
+                                                  id="comment-input-@post.Id"
+                                                  placeholder="Viết bình luận..."
+                                                  onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitNewCommentInline(@post.Id);}"></textarea>
+                                        <button class="comment-submit" onclick="submitNewCommentInline(@post.Id)">Gửi</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="comment-login-note">
+                                        <a href="#" onclick="openModal('login');return false;"
+                                           style="color:var(--accent);">Đăng nhập</a> để bình luận
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-card">
+            <div class="sidebar-card-title">Thống kê cộng đồng</div>
+            <div class="quick-stat">
+                <span class="quick-stat-label">📋 Tổng bài đăng</span>
+                <span class="quick-stat-val">@totalPosts</span>
+            </div>
+            <div class="quick-stat">
+                <span class="quick-stat-label"><i class="fa-solid fa-cat"></i> Tìm nuôi</span>
+                <span class="quick-stat-val">@adoptCount</span>
+            </div>
+            <div class="quick-stat">
+                <span class="quick-stat-label"><i class="fa-solid fa-magnifying-glass"></i> Thất lạc</span>
+                <span class="quick-stat-val">@lostCount</span>
+            </div>
+            <div class="quick-stat">
+                <span class="quick-stat-label"><i class="fa-solid fa-people-group"></i> Cộng đồng</span>
+                <span class="quick-stat-val">@shareCount</span>
+            </div>
+        </div>
+
+        @if (!isLoggedIn)
+        {
+            <div class="cta-box">
+                <h3>Tham gia ngay</h3>
+                <p>Đăng ký để chia sẻ câu chuyện và kết nối cộng đồng yêu mèo.</p>
+                <a href="#" class="cta-btn" onclick="openModal('register'); return false;">Đăng ký miễn phí</a>
+            </div>
+        }
+
+        <div class="sidebar-card">
+            <div class="sidebar-card-title">Danh mục</div>
+            <a class="sidebar-nav-link" href="/?type=Adoption"><i class="fa-solid fa-cat"></i> Tìm nuôi (Adoption)</a>
+            <a class="sidebar-nav-link" href="/?type=Thất lạc"><i class="fa-solid fa-magnifying-glass"></i> Thất lạc / Tìm chủ</a>
+            <a class="sidebar-nav-link" href="/?type=Chia sẻ"><i class="fa-solid fa-people-group"></i> Chia sẻ cộng đồng</a>
+        </div>
+    </aside>
+</div>
+
+<!-- AUTH MODAL -->
+<div class="overlay" id="modal-overlay">
+    <div class="modal">
+        <button class="modal-close" onclick="closeModal()">✕</button>
+        <div class="modal-logo">
+            <div class="modal-logo-icon">🐾</div>
+            <div class="modal-logo-text">Pet<span>Comm</span></div>
+        </div>
+        <div class="tab-btns">
+            <button class="tab-btn active" id="tab-login-btn" onclick="switchTab('login')">Đăng nhập</button>
+            <button class="tab-btn" id="tab-register-btn" onclick="switchTab('register')">Đăng ký</button>
+        </div>
+
+        <div class="tab-content active" id="tab-login">
+            @if (TempData["LoginError"] != null)
+            {
+                <div class="error-msg">⚠️ @TempData["LoginError"]</div>
+            }
+            <form method="post" action="/Account/Login">
+                @Html.AntiForgeryToken()
+                <div class="form-group">
+                    <label class="form-label">Tên đăng nhập</label>
+                    <input class="form-input" type="text" name="username" placeholder="Nhập tên đăng nhập..." required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mật khẩu</label>
+                    <input class="form-input" type="password" name="password" placeholder="••••••••" required />
+                </div>
+                <button type="submit" class="btn-submit">Đăng nhập</button>
+            </form>
+        </div>
+
+        <div class="tab-content" id="tab-register">
+            @if (TempData["RegisterError"] != null)
+            {
+                <div class="error-msg">⚠️ @TempData["RegisterError"]</div>
+            }
+            <form method="post" action="/Account/Register">
+                @Html.AntiForgeryToken()
+                <div class="form-group">
+                    <label class="form-label">Tên đăng nhập</label>
+                    <input class="form-input" type="text" name="username" placeholder="Tên hiển thị..." required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input class="form-input" type="email" name="email" placeholder="email@example.com" required />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mật khẩu</label>
+                    <input class="form-input" type="password" name="password" placeholder="Tối thiểu 6 ký tự" required />
+                </div>
+                <button type="submit" class="btn-submit">Tạo tài khoản</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox">
+    <button class="lb-close" onclick="closeLightbox()">✕</button>
+    <button class="lb-nav prev" id="lbPrev" onclick="lbNav(-1)">&#8249;</button>
+    <button class="lb-nav next" id="lbNext" onclick="lbNav(1)">&#8250;</button>
+    <div class="lb-inner">
+        <img id="lbImg" src="" alt="" />
+        <div class="lb-caption" id="lbCaption"></div>
+        <div class="lb-strip" id="lbStrip"></div>
+    </div>
+</div>
+
+<!-- FAB BUTTON -->
+@if (isLoggedIn)
+{
+    <button class="fab-post" onclick="openPostModal()">
+        <i class="fa-solid fa-plus"></i> Đăng bài
+    </button>
+}
+else
+{
+    <button class="fab-post" onclick="openModal('login')">
+        <span class="fab-icon">✏️</span> Đăng bài
+    </button>
+}
+
+@section Scripts {
+    <script>
+        let currentUserId = @(currentUserId ?? 0);
+        let activeReplyCommentId = null;
+
+        // ==================== LIGHTBOX ====================
+        var _imgs = [], _idx = 0;
+        document.addEventListener('click', function(e) {
+            var trigger = e.target.closest('.lb-trigger');
+            if (!trigger) return;
+            e.stopPropagation();
+            var images = JSON.parse(trigger.getAttribute('data-images'));
+            var idx = parseInt(trigger.getAttribute('data-index')) || 0;
+            openLightbox(images, idx);
+        });
+        function openLightbox(images, startIdx) { _imgs = images; _idx = startIdx; document.getElementById('lightbox').classList.add('open'); document.body.style.overflow = 'hidden'; renderLightbox(); }
+        function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); document.body.style.overflow = ''; }
+        function lbNav(dir) { _idx = (_idx + dir + _imgs.length) % _imgs.length; renderLightbox(); }
+        function renderLightbox() {
+            var img = document.getElementById('lbImg'); img.style.opacity = '0'; img.src = _imgs[_idx];
+            img.onload = function() { img.style.opacity = '1'; };
+            document.getElementById('lbCaption').textContent = _imgs.length > 1 ? 'Ảnh ' + (_idx + 1) + ' / ' + _imgs.length : '';
+            var strip = document.getElementById('lbStrip'); strip.innerHTML = '';
+            if (_imgs.length > 1) {
+                for (var i = 0; i < _imgs.length; i++) {
+                    (function(idx) {
+                        var t = document.createElement('img'); t.src = _imgs[idx]; t.alt = 'Ảnh ' + (idx + 1);
+                        t.className = 'lb-thumb' + (idx === _idx ? ' active' : '');
+                        t.addEventListener('click', function(e) { e.stopPropagation(); _idx = idx; renderLightbox(); });
+                        strip.appendChild(t);
+                    })(i);
+                }
+            }
+            var single = _imgs.length <= 1;
+            document.getElementById('lbPrev').style.display = single ? 'none' : 'flex';
+            document.getElementById('lbNext').style.display = single ? 'none' : 'flex';
+        }
+        document.getElementById('lightbox').addEventListener('click', function(e) { if (e.target === this) closeLightbox(); });
+        document.addEventListener('keydown', function(e) {
+            if (!document.getElementById('lightbox').classList.contains('open')) return;
+            if (e.key === 'Escape') closeLightbox();
+            if (e.key === 'ArrowLeft') lbNav(-1);
+            if (e.key === 'ArrowRight') lbNav(1);
+        });
+
+        // ==================== LOAD COMMENTS FOR POST ====================
+        function loadCommentsForPost(postId) {
+            fetch('/Comment/List?postId=' + postId)
+                .then(res => res.json())
+                .then(comments => {
+                    const container = document.getElementById('comment-list-' + postId);
+                    if (comments.length === 0) {
+                        container.innerHTML = '<p style="font-size:13px;color:var(--text-muted);text-align:center;padding:8px 0 4px;">Chưa có bình luận nào.</p>';
+                        return;
+                    }
+                    container.innerHTML = '';
+                    comments.forEach(comment => {
+                        container.appendChild(buildCommentInline(comment, postId));
+                    });
+                });
+        }
+
+        // Build comment HTML for inline
+        function buildCommentInline(comment, postId) {
+            const div = document.createElement('div');
+            div.className = 'comment-item';
+            div.setAttribute('data-comment-id', comment.id);
+
+            const avatarHtml = comment.userAvatar
+                ? `<img src="${comment.userAvatar}" alt="${escapeHtml(comment.username)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" />`
+                : `<span>${escapeHtml(comment.username)[0].toUpperCase()}</span>`;
+            const reportBtn = (currentUserId && currentUserId !== (comment.userId || 0))
+                ? `<button class="rp-cmt-btn" onclick="openCommentReport(${comment.id})" title="Báo cáo bình luận">🚩 Báo cáo</button>`
+                : '';
+
+            div.innerHTML = `
+                <div class="comment-avatar">
+                    ${avatarHtml}
+                </div>
+                <div class="comment-bubble">
+                    <div class="comment-username">${escapeHtml(comment.username)}</div>
+                    <div class="comment-text">${escapeHtml(comment.content)}</div>
+                    <div class="comment-time">${comment.createdAt}</div>
+                    <div class="comment-actions">
+                        <button class="reply-btn" onclick="showReplyFormInline(${comment.id}, ${postId})">
+                            <i class="fa-regular fa-reply"></i> Phản hồi
+                        </button>
+                        <button class="toggle-replies-btn" id="toggle-replies-${comment.id}" onclick="toggleRepliesInline(${comment.id})">
+                            <i class="fa-regular fa-comment-dots"></i> Xem phản hồi (${comment.replyCount || 0})
+                        </button>
+                        ${reportBtn}
+                    </div>
+                    <div class="reply-form" id="reply-form-${comment.id}" style="display: none;">
+                        <textarea class="reply-input" id="reply-input-${comment.id}" rows="2" placeholder="Viết phản hồi..."></textarea>
+                        <div class="reply-form-actions">
+                            <button class="reply-cancel" onclick="showReplyFormInline(${comment.id}, ${postId})">Hủy</button>
+                            <button class="reply-submit" onclick="submitReplyInline(${comment.id}, ${postId})">Gửi phản hồi</button>
+                        </div>
+                    </div>
+                    <div class="replies-container" id="replies-${comment.id}" style="display: none;"></div>
+                </div>
+            `;
+            return div;
+        }
+
+        // Submit new comment inline
+        function submitNewCommentInline(postId) {
+            const input = document.getElementById('comment-input-' + postId);
+            const content = input.value.trim();
+            if (!content) {
+                alert('Vui lòng nhập nội dung bình luận');
+                return;
+            }
+
+            fetch('/Comment/Add', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'postId=' + postId + '&content=' + encodeURIComponent(content)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    input.value = '';
+                    loadCommentsForPost(postId);
+                    // Update comment count
+                    const btn = document.getElementById('cmt-btn-' + postId);
+                    const span = btn ? btn.querySelector('.cmt-count') : null;
+                    if (span) span.textContent = parseInt(span.textContent || '0') + 1;
+                } else {
+                    alert('Không thể gửi bình luận. Vui lòng thử lại.');
+                }
+            });
+        }
+
+        // Show/hide reply form inline
+        function showReplyFormInline(commentId, postId) {
+            if (activeReplyCommentId === commentId) {
+                const replyForm = document.getElementById(`reply-form-${commentId}`);
+                if (replyForm) replyForm.style.display = 'none';
+                activeReplyCommentId = null;
+            } else {
+                if (activeReplyCommentId) {
+                    const oldForm = document.getElementById(`reply-form-${activeReplyCommentId}`);
+                    if (oldForm) oldForm.style.display = 'none';
+                }
+                const replyForm = document.getElementById(`reply-form-${commentId}`);
+                if (replyForm) {
+                    replyForm.style.display = 'block';
+                    replyForm.querySelector('.reply-input')?.focus();
+                }
+                activeReplyCommentId = commentId;
+            }
+        }
+
+        // Submit reply inline
+        async function submitReplyInline(commentId, postId) {
+            const input = document.getElementById(`reply-input-${commentId}`);
+            const content = input.value.trim();
+
+            if (!content) {
+                alert('Vui lòng nhập nội dung phản hồi');
+                return;
+            }
+
+            const submitBtn = document.querySelector(`#reply-form-${commentId} .reply-submit`);
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Đang gửi...';
+
+            try {
+                const response = await fetch('/CommentReply/Create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                    },
+                    body: `commentId=${commentId}&content=${encodeURIComponent(content)}`
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    input.value = '';
+                    await loadRepliesInline(commentId);
+
+                    const replyCountSpan = document.querySelector(`#toggle-replies-${commentId}`);
+                    if (replyCountSpan) {
+                        const match = replyCountSpan.textContent.match(/\((\d+)\)/);
+                        const currentCount = match ? parseInt(match[1]) : 0;
+                        replyCountSpan.innerHTML = `<i class="fa-regular fa-comment-dots"></i> Xem phản hồi (${currentCount + 1})`;
+                    }
+
+                    document.getElementById(`reply-form-${commentId}`).style.display = 'none';
+                    activeReplyCommentId = null;
+                } else {
+                    alert(data.message || 'Không thể gửi phản hồi');
+                }
+            } catch (error) {
+                alert('Có lỗi xảy ra, vui lòng thử lại');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+
+        // Load replies inline
+        async function loadRepliesInline(commentId) {
+            const container = document.getElementById(`replies-${commentId}`);
+            if (!container) return;
+
+            try {
+                const response = await fetch(`/CommentReply/List?commentId=${commentId}`);
+                const replies = await response.json();
+
+                if (replies.length === 0) {
+                    container.innerHTML = '<div class="no-replies">Chưa có phản hồi nào</div>';
+                    return;
+                }
+
+                container.innerHTML = replies.map(reply => `
+                    <div class="reply-item" id="reply-${reply.id}">
+                        <div class="reply-avatar">
+                            ${reply.userAvatar ? `<img src="${reply.userAvatar}" alt="${escapeHtml(reply.username)}" />` : `<span>${escapeHtml(reply.username)[0].toUpperCase()}</span>`}
+                        </div>
+                        <div class="reply-content">
+                            <div class="reply-header">
+                                <span class="reply-username">${escapeHtml(reply.username)}</span>
+                                <span class="reply-time">${reply.createdAt}</span>
+                                ${reply.isEdited ? '<span class="reply-edited">(đã sửa)</span>' : ''}
+                            </div>
+                            <div class="reply-text">${escapeHtml(reply.content)}</div>
+                            ${currentUserId === reply.userId ? `
+                                <div class="reply-actions">
+                                    <button class="reply-action-btn edit-reply" onclick="editReplyInline(${reply.id}, '${escapeHtml(reply.content).replace(/'/g, "\\'")}')">
+                                        <i class="fa-regular fa-pen-to-square"></i> Sửa
+                                    </button>
+                                    <button class="reply-action-btn delete-reply" onclick="deleteReplyInline(${reply.id})">
+                                        <i class="fa-regular fa-trash-can"></i> Xóa
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error('Error loading replies:', error);
+            }
+        }
+
+        // Toggle replies visibility inline
+        function toggleRepliesInline(commentId) {
+            const repliesContainer = document.getElementById(`replies-${commentId}`);
+            const toggleBtn = document.querySelector(`#toggle-replies-${commentId}`);
+
+            if (repliesContainer.style.display === 'none' || !repliesContainer.style.display) {
+                repliesContainer.style.display = 'block';
+                toggleBtn.innerHTML = '<i class="fa-regular fa-comment-dots"></i> Ẩn phản hồi';
+                if (repliesContainer.innerHTML === '') {
+                    loadRepliesInline(commentId);
+                }
+            } else {
+                repliesContainer.style.display = 'none';
+                const replyCount = repliesContainer.querySelectorAll('.reply-item').length;
+                toggleBtn.innerHTML = `<i class="fa-regular fa-comment-dots"></i> Xem phản hồi (${replyCount})`;
+            }
+        }
+
+        // Edit reply inline
+        async function editReplyInline(replyId, oldContent) {
+            const newContent = prompt('Sửa phản hồi của bạn:', oldContent);
+            if (!newContent || newContent === oldContent) return;
+
+            const response = await fetch('/CommentReply/Edit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: `replyId=${replyId}&content=${encodeURIComponent(newContent)}`
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                const replyDiv = document.getElementById(`reply-${replyId}`);
+                if (replyDiv) {
+                    const commentId = replyDiv.closest('.comment-item')?.getAttribute('data-comment-id');
+                    if (commentId) await loadRepliesInline(parseInt(commentId));
+                }
+            } else {
+                alert(data.message || 'Không thể sửa phản hồi');
+            }
+        }
+
+        // Delete reply inline
+        async function deleteReplyInline(replyId) {
+            if (!confirm('Bạn có chắc chắn muốn xóa phản hồi này?')) return;
+
+            const response = await fetch('/CommentReply/Delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: `replyId=${replyId}`
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                const replyDiv = document.getElementById(`reply-${replyId}`);
+                if (replyDiv) {
+                    const commentId = replyDiv.closest('.comment-item')?.getAttribute('data-comment-id');
+                    if (commentId) {
+                        await loadRepliesInline(parseInt(commentId));
+                        const toggleBtn = document.querySelector(`#toggle-replies-${commentId}`);
+                        if (toggleBtn) {
+                            const match = toggleBtn.textContent.match(/\((\d+)\)/);
+                            const currentCount = match ? parseInt(match[1]) : 0;
+                            toggleBtn.innerHTML = `<i class="fa-regular fa-comment-dots"></i> Xem phản hồi (${Math.max(0, currentCount - 1)})`;
+                        }
+                    }
+                }
+            } else {
+                alert(data.message || 'Không thể xóa phản hồi');
+            }
+        }
+
+        // ==================== TOGGLE COMMENTS ====================
+        function toggleComments(btn, postId) {
+            var section = document.getElementById('comments-' + postId);
+            if (!section) return;
+            var opening = !section.classList.contains('open');
+            section.classList.toggle('open');
+            btn.classList.toggle('cmt-open');
+            if (opening && document.getElementById('comment-list-' + postId).innerHTML === '') {
+                loadCommentsForPost(postId);
+            }
+        }
+
+        // ==================== BOOKMARK ====================
+        function toggleBookmark(btn, postId) {
+            fetch('/Bookmark/Toggle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: 'postId=' + postId
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) { openModal('login'); return; }
+                if (data.saved) {
+                    btn.classList.add('saved');
+                    btn.textContent = '🔖 Đã lưu';
+                } else {
+                    btn.classList.remove('saved');
+                    btn.textContent = '🔖 Lưu bài';
+                }
+            });
+        }
+
+        // ==================== ESCAPE HTML ====================
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // ==================== AUTH MODAL ====================
+        function openModal(tab) {
+            document.getElementById('modal-overlay').classList.add('active');
+            switchTab(tab);
+        }
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.remove('active');
+        }
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+            document.querySelectorAll('.tab-btn').forEach(function(t) { t.classList.remove('active'); });
+            document.getElementById('tab-' + tab).classList.add('active');
+            document.getElementById('tab-' + tab + '-btn').classList.add('active');
+        }
+        document.getElementById('modal-overlay').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // ==================== REPORT FUNCTIONS ====================
+        function openPostReport(postId) {
+            if (typeof window.openPostReport === 'function') {
+                window.openPostReport(postId);
+            } else {
+                console.error('openPostReport function not found');
+                alert('Chức năng báo cáo tạm thời không khả dụng');
+            }
+        }
+
+        function openCommentReport(commentId) {
+            if (typeof window.openCommentReport === 'function') {
+                window.openCommentReport(commentId);
+            } else {
+                console.error('openCommentReport function not found');
+                alert('Chức năng báo cáo tạm thời không khả dụng');
+            }
+        }
+
+        @if (TempData["LoginError"] != null)
+        {
+            <text>window.addEventListener('DOMContentLoaded', function() { openModal('login'); });</text>
+        }
+        else if (TempData["RegisterError"] != null)
+        {
+            <text>window.addEventListener('DOMContentLoaded', function() { openModal('register'); });</text>
+        }
+    </script>
+}
