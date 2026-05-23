@@ -135,7 +135,47 @@ namespace petcomm.Controllers
 
             return RedirectToAction(nameof(Index));
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleStatus(int id, string newStatus)
+        {
+            var post = await _context.Posts.FindAsync(id);
+            if (post == null)
+                return Json(new { success = false, message = "Không tìm thấy bài đăng" });
 
+            var allowed = new[] { "Active", "Hidden", "Pending" };
+            if (!allowed.Contains(newStatus))
+                return Json(new { success = false, message = "Trạng thái không hợp lệ" });
+
+            post.Status = newStatus;
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = $"Đã cập nhật thành {newStatus}" });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteAjax(int id)
+        {
+            var post = await _context.Posts
+                .Include(p => p.Images)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (post == null)
+                return Json(new { success = false, message = "Không tìm thấy bài đăng" });
+
+            foreach (var img in post.Images)
+            {
+                var filePath = Path.Combine(_env.WebRootPath, img.ImagePath!.TrimStart('/'));
+                if (System.IO.File.Exists(filePath))
+                    System.IO.File.Delete(filePath);
+            }
+
+            _context.Posts.Remove(post);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = "Đã xoá bài đăng" });
+        }
         private async Task SaveImages(int postId, List<IFormFile> images)
         {
             if (images == null || !images.Any()) return;

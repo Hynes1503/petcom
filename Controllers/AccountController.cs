@@ -21,7 +21,6 @@ namespace petcomm.Controllers
             _env = env;
         }
 
-        // GET: /Account/Login
         [HttpGet]
         [AllowAnonymous]
         public IActionResult Login(string returnUrl = null)
@@ -30,7 +29,6 @@ namespace petcomm.Controllers
             return View();
         }
 
-        // POST: /Account/Login
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
@@ -51,7 +49,6 @@ namespace petcomm.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            // Tạo claims cho Cookie Authentication
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -70,7 +67,6 @@ namespace petcomm.Controllers
                 ExpiresUtc = DateTimeOffset.UtcNow.AddDays(7)
             };
 
-            // Đăng nhập bằng Cookie Authentication
             await HttpContext.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
                 new ClaimsPrincipal(claimsIdentity),
@@ -91,7 +87,6 @@ namespace petcomm.Controllers
             return RedirectToAction("Index", "Home");
         }
 
-        // GET: /Account/Logout
         [HttpGet]
         public async Task<IActionResult> Logout()
         {
@@ -100,7 +95,6 @@ namespace petcomm.Controllers
             return RedirectToAction("Index", "Home");
         }
 
-        // GET: /Account/Register
         [HttpGet]
         [AllowAnonymous]
         public IActionResult Register()
@@ -108,7 +102,6 @@ namespace petcomm.Controllers
             return View();
         }
 
-        // POST: /Account/Register
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
@@ -120,7 +113,6 @@ namespace petcomm.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            // Kiểm tra username đã tồn tại
             var existingUser = await _context.Users
                 .FirstOrDefaultAsync(u => u.Username == username);
             if (existingUser != null)
@@ -129,7 +121,6 @@ namespace petcomm.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            // Kiểm tra email đã tồn tại
             var existingEmail = await _context.Users
                 .FirstOrDefaultAsync(u => u.Email == email);
             if (existingEmail != null)
@@ -138,10 +129,8 @@ namespace petcomm.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            // Hash password
             string hashedPassword = HashPassword(password);
 
-            // Tạo user mới
             var user = new User
             {
                 Username = username,
@@ -155,7 +144,6 @@ namespace petcomm.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            // Tự động đăng nhập
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -176,7 +164,6 @@ namespace petcomm.Controllers
                 new ClaimsPrincipal(claimsIdentity),
                 authProperties);
 
-            // Đồng bộ Session
             HttpContext.Session.SetString("Username", user.Username);
             HttpContext.Session.SetInt32("UserId", user.Id);
             HttpContext.Session.SetString("UserEmail", user.Email ?? "");
@@ -186,7 +173,6 @@ namespace petcomm.Controllers
             return RedirectToAction("Index", "Home");
         }
 
-        // GET: /Account/Profile
         [Authorize]
         [Route("account/profile")]
         public async Task<IActionResult> Profile(string? username = null)
@@ -243,7 +229,6 @@ namespace petcomm.Controllers
             return View(vm);
         }
 
-        // GET: /Account/GetProfileData
         [HttpGet]
         [Authorize]
         public async Task<IActionResult> GetProfileData()
@@ -268,7 +253,6 @@ namespace petcomm.Controllers
             });
         }
 
-        // POST: /Account/UpdateProfile
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
@@ -284,7 +268,6 @@ namespace petcomm.Controllers
             if (user == null)
                 return Json(new { success = false, message = "Không tìm thấy người dùng." });
 
-            // Kiểm tra username trùng
             if (username != user.Username)
             {
                 var existingUser = await _context.Users
@@ -293,7 +276,6 @@ namespace petcomm.Controllers
                     return Json(new { success = false, message = "Tên đăng nhập đã tồn tại." });
             }
 
-            // Kiểm tra email trùng
             if (email != user.Email)
             {
                 var existingEmail = await _context.Users
@@ -302,14 +284,12 @@ namespace petcomm.Controllers
                     return Json(new { success = false, message = "Email đã được sử dụng." });
             }
 
-            // Cập nhật thông tin
             user.Username = username;
             user.Email = email;
             user.Bio = bio;
             user.PhoneNumber = phoneNumber;
             user.FullName = fullName;
 
-            // Xử lý upload avatar
             if (avatar != null && avatar.Length > 0)
             {
                 var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
@@ -321,7 +301,6 @@ namespace petcomm.Controllers
                 if (avatar.Length > 5 * 1024 * 1024)
                     return Json(new { success = false, message = "Kích thước ảnh không được vượt quá 5MB." });
 
-                // Xóa avatar cũ
                 if (!string.IsNullOrEmpty(user.AvatarPath))
                 {
                     var oldPath = Path.Combine(_env.WebRootPath, user.AvatarPath.TrimStart('/'));
@@ -329,7 +308,6 @@ namespace petcomm.Controllers
                         System.IO.File.Delete(oldPath);
                 }
 
-                // Lưu avatar mới
                 var uploadDir = Path.Combine(_env.WebRootPath, "uploads", "avatars");
                 if (!Directory.Exists(uploadDir))
                     Directory.CreateDirectory(uploadDir);
@@ -347,7 +325,6 @@ namespace petcomm.Controllers
 
             await _context.SaveChangesAsync();
 
-            // Cập nhật Cookie Claims
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -364,7 +341,6 @@ namespace petcomm.Controllers
                 CookieAuthenticationDefaults.AuthenticationScheme,
                 new ClaimsPrincipal(claimsIdentity));
 
-            // Cập nhật Session
             HttpContext.Session.SetString("Username", user.Username);
             HttpContext.Session.SetString("UserEmail", user.Email ?? "");
             HttpContext.Session.SetString("UserAvatar", user.AvatarPath ?? "");
@@ -372,7 +348,6 @@ namespace petcomm.Controllers
             return Json(new { success = true, message = "Cập nhật hồ sơ thành công!" });
         }
 
-        // Helper methods
         private int? GetCurrentUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

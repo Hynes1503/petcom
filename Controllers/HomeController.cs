@@ -31,7 +31,6 @@ namespace petcomm.Controllers
             var posts = await query.ToListAsync();
             var postIds = posts.Select(p => p.Id).ToList();
 
-            // Comment counts
             var commentCounts = await _context.Comments
                 .Where(c => postIds.Contains(c.PostId))
                 .GroupBy(c => c.PostId)

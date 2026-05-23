@@ -18,7 +18,6 @@ namespace petcomm.Controllers
 
         private int? GetCurrentUserId() => HttpContext.Session.GetInt32("UserId");
 
-        // GET: /Comment/List
         [HttpGet]
         public async Task<IActionResult> List(int postId)
         {
@@ -48,7 +47,6 @@ namespace petcomm.Controllers
             }
         }
 
-        // POST: /Comment/Add
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Add(int postId, string content)
@@ -62,7 +60,6 @@ namespace petcomm.Controllers
                 if (string.IsNullOrWhiteSpace(content))
                     return Json(new { success = false, message = "Vui lòng nhập nội dung bình luận." });
 
-                // Kiểm tra post có tồn tại không
                 var post = await _context.Posts.FindAsync(postId);
                 if (post == null)
                     return Json(new { success = false, message = "Bài viết không tồn tại." });

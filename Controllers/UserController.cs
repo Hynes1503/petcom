@@ -14,7 +14,6 @@ namespace petcomm.Controllers
             _context = context;
         }
 
-        // GET: /User/Details/{username} - Đổi tên từ Profile thành Details
         [HttpGet]
         [Route("user/details/{username?}")]
         public async Task<IActionResult> Details(string? username = null)
@@ -68,10 +67,9 @@ namespace petcomm.Controllers
             ViewBag.CommentCounts = commentCounts;
             ViewBag.BookmarkedByUser = bookmarkedByUser;
             ViewData["Title"] = $"{user.Username} — Profile | PetComm";
-            return View("Profile", vm); // Vẫn sử dụng view Profile.cshtml
+            return View("Profile", vm);
         }
 
-        // GET: /User/Posts/{userId}
         [HttpGet]
         public async Task<IActionResult> Posts(int userId, int page = 1, int pageSize = 10)
         {

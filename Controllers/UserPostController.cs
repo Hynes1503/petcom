@@ -16,10 +16,8 @@ namespace petcomm.Controllers
             _env = env;
         }
 
-        // ── Helper: lấy UserId từ session, trả null nếu chưa đăng nhập ──
         private int? GetCurrentUserId() => HttpContext.Session.GetInt32("UserId");
 
-        // ── Kiểm tra bài viết thuộc về user hiện tại ──
         private async Task<Post?> GetOwnPostAsync(int postId)
         {
             var userId = GetCurrentUserId();
@@ -31,9 +29,6 @@ namespace petcomm.Controllers
                 .FirstOrDefaultAsync(p => p.Id == postId && p.UserId == userId.Value);
         }
 
-        // ─────────────────────────────────────────────────────────────────
-        // DETAILS - Trang chi tiết bài viết
-        // ─────────────────────────────────────────────────────────────────
         [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
@@ -50,11 +45,9 @@ namespace petcomm.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            // Tăng lượt xem
             post.ViewCount += 1;
             await _context.SaveChangesAsync();
 
-            // Kiểm tra bài viết đã được lưu bởi user hiện tại chưa
             var currentUserId = GetCurrentUserId();
             bool isBookmarked = false;
             bool isOwnPost = false;
@@ -66,7 +59,6 @@ namespace petcomm.Controllers
                     .AnyAsync(b => b.UserId == currentUserId.Value && b.PostId == post.Id);
                 isOwnPost = post.UserId == currentUserId.Value;
 
-                // Lấy số lượng yêu cầu đang chờ xử lý (cho chủ bài viết)
                 if (isOwnPost && post.Type == "Adoption")
                 {
                     requestCount = await _context.AdoptionRequests
@@ -74,7 +66,6 @@ namespace petcomm.Controllers
                 }
             }
 
-            // Lấy các bài viết liên quan
             var relatedPosts = await _context.Posts
                 .Include(p => p.Images)
                 .Where(p => p.Status == "Active" && p.Id != post.Id &&
@@ -87,14 +78,11 @@ namespace petcomm.Controllers
             ViewBag.IsOwnPost = isOwnPost;
             ViewBag.CurrentUserId = currentUserId;
             ViewBag.RelatedPosts = relatedPosts;
-            ViewBag.RequestCount = requestCount; // Thêm dòng này
+            ViewBag.RequestCount = requestCount;
 
             return View(post);
         }
 
-        // ─────────────────────────────────────────────────────────────────
-        // GET EDIT DATA - Lấy dữ liệu bài viết để edit (cho modal)
-        // ─────────────────────────────────────────────────────────────────
         [HttpGet]
         public async Task<IActionResult> GetEditData(int id)
         {
@@ -118,9 +106,6 @@ namespace petcomm.Controllers
             return Json(data);
         }
 
-        // ─────────────────────────────────────────────────────────────────
-        // EDIT (POST)  POST /UserPost/Edit
-        // ─────────────────────────────────────────────────────────────────
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit([FromForm] int id, [FromForm] string title,
@@ -131,12 +116,10 @@ namespace petcomm.Controllers
             if (existing == null)
                 return Json(new { success = false, message = "Không tìm thấy hoặc bạn không có quyền." });
 
-            // Cập nhật các trường được phép
             existing.Title = title;
             existing.Content = content;
             existing.Type = type;
 
-            // Xóa ảnh được chọn xóa
             if (deleteImageIds != null && deleteImageIds.Any())
             {
                 var toDelete = existing.Images
@@ -154,15 +137,11 @@ namespace petcomm.Controllers
 
             await _context.SaveChangesAsync();
 
-            // Thêm ảnh mới
             await SaveImages(id, images);
 
             return Json(new { success = true, message = "Cập nhật bài viết thành công!" });
         }
 
-        // ─────────────────────────────────────────────────────────────────
-        // CREATE  POST /UserPost/Create
-        // ─────────────────────────────────────────────────────────────────
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Post post, List<IFormFile> images)
@@ -181,13 +160,9 @@ namespace petcomm.Controllers
 
             await SaveImages(post.Id, images);
 
-            // Trả về JSON để modal đóng và reload trang
             return Json(new { success = true, postId = post.Id });
         }
 
-        // ─────────────────────────────────────────────────────────────────
-        // DELETE  POST /UserPost/Delete/{id}
-        // ─────────────────────────────────────────────────────────────────
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
@@ -196,7 +171,6 @@ namespace petcomm.Controllers
             if (post == null)
                 return Json(new { success = false, message = "Không tìm thấy hoặc bạn không có quyền." });
 
-            // Xóa file ảnh vật lý
             foreach (var img in post.Images)
             {
                 var filePath = Path.Combine(_env.WebRootPath, img.ImagePath!.TrimStart('/'));
@@ -210,9 +184,6 @@ namespace petcomm.Controllers
             return Json(new { success = true });
         }
 
-        // ─────────────────────────────────────────────────────────────────
-        // HELPER: lưu ảnh
-        // ─────────────────────────────────────────────────────────────────
         private async Task SaveImages(int postId, List<IFormFile> images)
         {
             if (images == null || !images.Any()) return;

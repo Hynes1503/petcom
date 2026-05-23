@@ -19,7 +19,6 @@ namespace petcomm.Controllers
             _env = env;
         }
 
-        // GET: /admin
         [HttpGet("")]
         [HttpGet("dashboard")]
         public async Task<IActionResult> Dashboard()
@@ -45,9 +44,6 @@ namespace petcomm.Controllers
             return View(vm);
         }
 
-        // ===================== USER MANAGEMENT =====================
-
-        // GET: /admin/users
         [HttpGet("users")]
         public async Task<IActionResult> Users(string? search, string? role, string? status, int page = 1)
         {
@@ -83,7 +79,6 @@ namespace petcomm.Controllers
             return View(users);
         }
 
-        // GET: /admin/users/{id}
         [HttpGet("users/{id}")]
         public async Task<IActionResult> UserDetail(int id)
         {
@@ -101,7 +96,6 @@ namespace petcomm.Controllers
             return View(user);
         }
 
-        // POST: /admin/users/{id}/toggle-status
         [HttpPost("users/{id}/toggle-status")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleUserStatus(int id)
@@ -109,7 +103,6 @@ namespace petcomm.Controllers
             var user = await _context.Users.FindAsync(id);
             if (user == null) return Json(new { success = false, message = "Không tìm thấy người dùng." });
 
-            // Không cho phép khoá chính mình
             var currentUserId = GetCurrentUserId();
             if (currentUserId == id)
                 return Json(new { success = false, message = "Không thể khoá tài khoản của chính mình." });
@@ -125,7 +118,6 @@ namespace petcomm.Controllers
             });
         }
 
-        // POST: /admin/users/{id}/change-role
         [HttpPost("users/{id}/change-role")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangeUserRole(int id, string role)
@@ -147,7 +139,6 @@ namespace petcomm.Controllers
             return Json(new { success = true, message = $"Đã đổi vai trò thành {role}." });
         }
 
-        // POST: /admin/users/{id}/delete
         [HttpPost("users/{id}/delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteUser(int id)
@@ -159,7 +150,6 @@ namespace petcomm.Controllers
             var user = await _context.Users.FindAsync(id);
             if (user == null) return Json(new { success = false, message = "Không tìm thấy người dùng." });
 
-            // Xoá avatar nếu có
             if (!string.IsNullOrEmpty(user.AvatarPath))
             {
                 var avatarPath = Path.Combine(_env.WebRootPath, user.AvatarPath.TrimStart('/'));
@@ -173,9 +163,6 @@ namespace petcomm.Controllers
             return Json(new { success = true, message = "Đã xoá người dùng." });
         }
 
-        // ===================== POST MANAGEMENT =====================
-
-        // GET: /admin/posts
         [HttpGet("posts")]
         public async Task<IActionResult> Posts(string? search, string? type, string? status, int page = 1)
         {
@@ -209,7 +196,6 @@ namespace petcomm.Controllers
             return View(posts);
         }
 
-        // GET: /admin/posts/{id}
         [HttpGet("posts/{id}")]
         public async Task<IActionResult> PostDetail(int id)
         {
@@ -226,7 +212,6 @@ namespace petcomm.Controllers
             return View(post);
         }
 
-        // POST: /admin/posts/{id}/toggle-status
         [HttpPost("posts/{id}/toggle-status")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> TogglePostStatus(int id, string newStatus)
@@ -244,7 +229,6 @@ namespace petcomm.Controllers
             return Json(new { success = true, message = $"Đã đổi trạng thái thành {newStatus}.", status = newStatus });
         }
 
-        // POST: /admin/posts/{id}/delete
         [HttpPost("posts/{id}/delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeletePost(int id)
@@ -255,7 +239,6 @@ namespace petcomm.Controllers
 
             if (post == null) return Json(new { success = false, message = "Không tìm thấy bài đăng." });
 
-            // Xoá ảnh liên quan
             foreach (var img in post.Images)
             {
                 if (!string.IsNullOrEmpty(img.ImagePath))
@@ -284,7 +267,7 @@ namespace petcomm.Controllers
             if (!string.IsNullOrEmpty(status))
                 query = query.Where(r => r.Status == status);
             else
-                query = query.Where(r => r.Status == "Pending"); // Mặc định hiện Pending
+                query = query.Where(r => r.Status == "Pending");
 
             var totalCount = await query.CountAsync();
             var reports = await query
@@ -293,7 +276,6 @@ namespace petcomm.Controllers
                 .Take(pageSize)
                 .ToListAsync();
 
-            // Stats
             ViewBag.PendingCount = await _context.PostReports.CountAsync(r => r.Status == "Pending");
             ViewBag.ResolvedCount = await _context.PostReports.CountAsync(r => r.Status == "Resolved");
             ViewBag.DismissedCount = await _context.PostReports.CountAsync(r => r.Status == "Dismissed");
@@ -306,8 +288,6 @@ namespace petcomm.Controllers
             return View(reports);
         }
 
-        // POST: /admin/reports/{id}/resolve
-        // action = "hide_post" | "delete_post" | "dismiss"
         [HttpPost("reports/{id}/resolve")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResolveReport(int id, string action, string? adminNote)
@@ -328,7 +308,6 @@ namespace petcomm.Controllers
             }
             else if (action == "delete_post" && report.Post != null)
             {
-                // Xoá ảnh liên quan
                 var images = await _context.Set<PostImage>().Where(i => i.PostId == report.PostId).ToListAsync();
                 foreach (var img in images)
                 {
@@ -354,7 +333,6 @@ namespace petcomm.Controllers
             report.ReviewedAt = DateTime.Now;
             report.AdminNote = adminNote?.Trim();
 
-            // Đánh dấu tất cả các report pending khác cùng bài này là Resolved
             if (action != "dismiss")
             {
                 var otherReports = await _context.PostReports
@@ -373,7 +351,6 @@ namespace petcomm.Controllers
             return Json(new { success = true, message = "Đã xử lý báo cáo." });
         }
 
-        // POST: /admin/reports/{id}/restore-post
         [HttpPost("reports/{id}/restore-post")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RestorePost(int id)
@@ -385,7 +362,6 @@ namespace petcomm.Controllers
             await _context.SaveChangesAsync();
             return Json(new { success = true, message = "Đã khôi phục bài đăng." });
         }
-        // Helper
         private int? GetCurrentUserId()
         {
             var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

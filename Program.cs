@@ -58,11 +58,22 @@ namespace petcomm
 
             app.UseSession();         
             app.UseAuthentication();    
-            app.UseAuthorization();   
+            app.UseAuthorization();
+
+            app.MapControllerRoute(
+            name: "admin_post_toggle",
+            pattern: "admin/posts/{id}/toggle-status",
+            defaults: new { controller = "AdminPost", action = "ToggleStatus" });
+
+            app.MapControllerRoute(
+                name: "admin_post_delete",
+                pattern: "admin/posts/{id}/delete",
+                defaults: new { controller = "AdminPost", action = "DeleteAjax" });
 
             app.MapControllerRoute(
                 name: "default",
                 pattern: "{controller=Home}/{action=Index}/{id?}");
+
 
             app.Run();
         }

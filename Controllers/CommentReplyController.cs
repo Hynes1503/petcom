@@ -18,7 +18,6 @@ namespace petcomm.Controllers
 
         private int? GetCurrentUserId() => HttpContext.Session.GetInt32("UserId");
 
-        // POST: /CommentReply/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(int commentId, string content)
@@ -65,7 +64,6 @@ namespace petcomm.Controllers
             });
         }
 
-        // POST: /CommentReply/Edit
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int replyId, string content)
@@ -92,7 +90,6 @@ namespace petcomm.Controllers
             return Json(new { success = true, content = content, isEdited = true });
         }
 
-        // POST: /CommentReply/Delete
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int replyId)
@@ -116,7 +113,6 @@ namespace petcomm.Controllers
             return Json(new { success = true, message = "Đã xóa phản hồi." });
         }
 
-        // GET: /CommentReply/List
         [HttpGet]
         public async Task<IActionResult> List(int commentId)
         {

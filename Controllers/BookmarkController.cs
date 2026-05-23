@@ -18,7 +18,6 @@ namespace petcomm.Controllers
 
         private int? GetCurrentUserId() => HttpContext.Session.GetInt32("UserId");
 
-        // GET: /Bookmark/MyBookmarks
         [HttpGet]
         public async Task<IActionResult> MyBookmarks()
         {
@@ -29,26 +28,14 @@ namespace petcomm.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            // Cách 1: Sử dụng ThenInclude đúng cách
             var bookmarks = await _context.Bookmarks
-                .Include(b => b.Post)  // Include Post
-                    .ThenInclude(p => p.Images)  // ThenInclude Images từ Post
-                .Include(b => b.Post.User)  // Include User từ Post (cách viết đơn giản hơn)
+                .Include(b => b.Post)
+                    .ThenInclude(p => p.Images)
+                .Include(b => b.Post.User)
                 .Where(b => b.UserId == userId.Value)
                 .OrderByDescending(b => b.CreatedAt)
                 .ToListAsync();
 
-            // Hoặc cách 2: Sử dụng Include với lambda rõ ràng
-            // var bookmarks = await _context.Bookmarks
-            //     .Include(b => b.Post)
-            //         .ThenInclude(p => p.Images)
-            //     .Include(b => b.Post)
-            //         .ThenInclude(p => p.User)
-            //     .Where(b => b.UserId == userId.Value)
-            //     .OrderByDescending(b => b.CreatedAt)
-            //     .ToListAsync();
-
-            // Lấy số lượng bình luận cho mỗi bài viết
             var postIds = bookmarks.Select(b => b.PostId).ToList();
             var commentCounts = new Dictionary<int, int>();
 
@@ -67,7 +54,6 @@ namespace petcomm.Controllers
             return View(bookmarks);
         }
 
-        // POST: /Bookmark/Toggle
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Toggle(int postId)
@@ -99,7 +85,6 @@ namespace petcomm.Controllers
             }
         }
 
-        // POST: /Bookmark/Remove
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Remove(int bookmarkId)

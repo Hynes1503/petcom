@@ -18,7 +18,6 @@ namespace petcomm.Controllers
 
         private int? GetCurrentUserId() => HttpContext.Session.GetInt32("UserId");
 
-        // GET: Danh sách tất cả yêu cầu nhận nuôi gửi đến tôi
         [HttpGet]
         public async Task<IActionResult> ReceivedRequests()
         {
@@ -26,7 +25,6 @@ namespace petcomm.Controllers
             if (userId == null)
                 return RedirectToAction("Index", "Home");
 
-            // Lấy tất cả yêu cầu gửi đến user hiện tại
             var requests = await _context.AdoptionRequests
                 .Include(r => r.Requester)
                 .Include(r => r.Post)
@@ -35,14 +33,12 @@ namespace petcomm.Controllers
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
 
-            // Thống kê theo trạng thái
             ViewBag.PendingCount = requests.Count(r => r.Status == "pending");
             ViewBag.ApprovedCount = requests.Count(r => r.Status == "approved");
             ViewBag.RejectedCount = requests.Count(r => r.Status == "rejected");
             ViewBag.CancelledCount = requests.Count(r => r.Status == "cancelled");
             ViewBag.TotalCount = requests.Count;
 
-            // Lấy danh sách bài viết của user để lọc
             var userPosts = await _context.Posts
                 .Where(p => p.UserId == userId.Value && p.Type == "Adoption" && p.Status == "Active")
                 .Select(p => new { p.Id, p.Title })
@@ -53,7 +49,6 @@ namespace petcomm.Controllers
             return View(requests);
         }
 
-        // GET: Lọc yêu cầu theo bài viết
         [HttpGet]
         public async Task<IActionResult> FilterByPost(int postId)
         {
@@ -78,7 +73,6 @@ namespace petcomm.Controllers
             ViewBag.SelectedPostId = postId;
             ViewBag.SelectedPostTitle = post.Title;
 
-            // Thống kê
             ViewBag.PendingCount = requests.Count(r => r.Status == "pending");
             ViewBag.ApprovedCount = requests.Count(r => r.Status == "approved");
             ViewBag.RejectedCount = requests.Count(r => r.Status == "rejected");
@@ -94,7 +88,6 @@ namespace petcomm.Controllers
             return View("ReceivedRequests", requests);
         }
 
-        // GET: Gửi yêu cầu nhận nuôi
         [HttpGet]
         public async Task<IActionResult> Request(int postId)
         {
@@ -127,7 +120,6 @@ namespace petcomm.Controllers
             return View(post);
         }
 
-        // POST: Gửi yêu cầu nhận nuôi
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Request(int postId, [FromForm] string message,
@@ -176,7 +168,6 @@ namespace petcomm.Controllers
             return Json(new { success = true, message = "Gửi yêu cầu thành công! Chủ bài viết sẽ liên hệ với bạn." });
         }
 
-        // GET: Quản lý yêu cầu cho một bài viết cụ thể (giữ lại cho tương thích)
         [HttpGet]
         public async Task<IActionResult> ManageRequests(int postId)
         {
@@ -200,7 +191,6 @@ namespace petcomm.Controllers
             return View(requests);
         }
 
-        // POST: Xác nhận nhận nuôi
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Approve(int requestId, [FromForm] string adminNote)
@@ -244,7 +234,6 @@ namespace petcomm.Controllers
             return Json(new { success = true, message = "Đã xác nhận nhận nuôi thành công!" });
         }
 
-        // POST: Từ chối yêu cầu
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Reject(int requestId, [FromForm] string adminNote)
@@ -274,7 +263,6 @@ namespace petcomm.Controllers
             return Json(new { success = true, message = "Đã từ chối yêu cầu." });
         }
 
-        // GET: Xem danh sách yêu cầu của tôi (người gửi)
         [HttpGet]
         public async Task<IActionResult> MyRequests()
         {
@@ -292,7 +280,6 @@ namespace petcomm.Controllers
             return View(requests);
         }
 
-        // POST: Hủy yêu cầu
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Cancel(int requestId)

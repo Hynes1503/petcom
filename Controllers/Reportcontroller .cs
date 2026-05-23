@@ -21,7 +21,6 @@ namespace petcomm.Controllers
             return HttpContext.Session.GetInt32("UserId");
         }
 
-        // POST: /Report/SubmitPost
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SubmitPost(int postId, string reason, string? description)
@@ -55,7 +54,6 @@ namespace petcomm.Controllers
             return Json(new { success = true, message = "Đã gửi báo cáo. Chúng tôi sẽ xem xét sớm nhất có thể." });
         }
 
-        // POST: /Report/SubmitComment
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SubmitComment(int commentId, string reason, string? description)
